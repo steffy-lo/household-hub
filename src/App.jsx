@@ -1046,20 +1046,21 @@ function Pixoo({ data, save }) {
 
     // Step 1: build the rotating household animation
     const frames = PIXOO_ROTATION_MODES.map(frameMode => renderToCanvas(data, frameMode, time));
-    const base64rgb = frames.map(canvasToPixooBase64).join("");
+    const frameData = frames.map(canvasToPixooBase64);
     const picId = await getNextPicId(log);
     if (picId == null) {
       setSending(false);
       return;
     }
 
-    // Verify payload: 4 frames × (64×64×3 bytes → 16384 base64 chars)
-    const expectedLen = PIXOO_ROTATION_MODES.length * (PW * PH * 3 * 4 / 3);
-    if (base64rgb.length !== expectedLen) {
-      log.push({ label: `Payload size error: got ${base64rgb.length} chars, expected ${expectedLen}`, ok: false, detail: "Canvas encoding failed" });
+    // Each frame must be uploaded separately with the same PicID and increasing PicOffset.
+    const expectedLen = PW * PH * 3 * 4 / 3;
+    const badFrame = frameData.findIndex(b64 => b64.length !== expectedLen);
+    if (badFrame !== -1) {
+      log.push({ label: `Payload size error on frame ${badFrame + 1}`, ok: false, detail: `got ${frameData[badFrame].length} chars, expected ${expectedLen}` });
       setSendLog([...log]); setSending(false); return;
     }
-    log.push({ label: `Payload verified: ${base64rgb.length} chars (${PIXOO_ROTATION_MODES.length} frames)`, ok: true, detail: "" });
+    log.push({ label: `Payload verified: ${PIXOO_ROTATION_MODES.length} frames × ${expectedLen} chars`, ok: true, detail: "" });
     setSendLog([...log]);
 
     await step("Switch to Custom channel (SelectIndex: 3)", {
@@ -1067,15 +1068,21 @@ function Pixoo({ data, save }) {
       SelectIndex: 3,
     });
 
-    await step("Send pixel frame (Draw/SendHttpGif)", {
-      Command: "Draw/SendHttpGif",
-      PicNum: PIXOO_ROTATION_MODES.length,
-      PicWidth: 64,
-      PicOffset: 0,
-      PicID: picId,
-      PicSpeed: 3000,
-      PicData: base64rgb,
-    });
+    for (let i = 0; i < frameData.length; i++) {
+      const ok = await step(`Upload frame ${i + 1}/${frameData.length} (Draw/SendHttpGif)`, {
+        Command: "Draw/SendHttpGif",
+        PicNum: PIXOO_ROTATION_MODES.length,
+        PicWidth: 64,
+        PicOffset: i,
+        PicID: picId,
+        PicSpeed: 3000,
+        PicData: frameData[i],
+      });
+      if (!ok) {
+        setSending(false);
+        return;
+      }
+    }
 
     setSending(false);
   };
