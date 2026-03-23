@@ -760,36 +760,68 @@ function pxTightText(ctx, str, x, y, color, maxW = PW, spacing = 0) {
     if (cx - x >= maxW) break;
   }
 }
-function getMiniGlyphCols(ch) {
-  const cols = getGlyphCols(ch);
-  const out = [];
-  const maps = [
-    [0],
-    [0, 1],
-    [0, 1, 2],
-    [0, 1, 2, 3],
-  ];
-  const pick = maps[Math.min(3, cols.length - 1)];
-  const rowMap = [0, 1, 3, 5, 6];
-  for (const sourceCol of pick) {
-    let mask = 0;
-    for (let r = 0; r < rowMap.length; r++) {
-      if (cols[sourceCol] & (1 << rowMap[r])) mask |= (1 << r);
-    }
-    out.push(mask);
-  }
-  return out.length ? out : [0];
+const MINI_FONT = {
+  "A": ["0110", "1001", "1111", "1001", "1001"],
+  "B": ["1110", "1001", "1110", "1001", "1110"],
+  "C": ["0111", "1000", "1000", "1000", "0111"],
+  "D": ["1110", "1001", "1001", "1001", "1110"],
+  "E": ["1111", "1000", "1110", "1000", "1111"],
+  "F": ["1111", "1000", "1110", "1000", "1000"],
+  "G": ["0111", "1000", "1011", "1001", "0111"],
+  "H": ["1001", "1001", "1111", "1001", "1001"],
+  "I": ["111", "010", "010", "010", "111"],
+  "J": ["0011", "0001", "0001", "1001", "0110"],
+  "K": ["1001", "1010", "1100", "1010", "1001"],
+  "L": ["1000", "1000", "1000", "1000", "1111"],
+  "M": ["10001", "11011", "10101", "10001", "10001"],
+  "N": ["1001", "1101", "1011", "1001", "1001"],
+  "O": ["0110", "1001", "1001", "1001", "0110"],
+  "P": ["1110", "1001", "1110", "1000", "1000"],
+  "Q": ["0110", "1001", "1001", "1011", "0111"],
+  "R": ["1110", "1001", "1110", "1010", "1001"],
+  "S": ["0111", "1000", "0110", "0001", "1110"],
+  "T": ["11111", "00100", "00100", "00100", "00100"],
+  "U": ["1001", "1001", "1001", "1001", "0110"],
+  "V": ["10001", "10001", "01010", "01010", "00100"],
+  "W": ["10001", "10001", "10101", "11011", "10001"],
+  "X": ["1001", "1001", "0110", "1001", "1001"],
+  "Y": ["1001", "1001", "0110", "0010", "0010"],
+  "Z": ["1111", "0001", "0010", "0100", "1111"],
+  "0": ["0110", "1001", "1001", "1001", "0110"],
+  "1": ["010", "110", "010", "010", "111"],
+  "2": ["1110", "0001", "0110", "1000", "1111"],
+  "3": ["1110", "0001", "0110", "0001", "1110"],
+  "4": ["1001", "1001", "1111", "0001", "0001"],
+  "5": ["1111", "1000", "1110", "0001", "1110"],
+  "6": ["0111", "1000", "1110", "1001", "0110"],
+  "7": ["1111", "0001", "0010", "0100", "0100"],
+  "8": ["0110", "1001", "0110", "1001", "0110"],
+  "9": ["0110", "1001", "0111", "0001", "1110"],
+  " ": ["00", "00", "00", "00", "00"],
+  "-": ["000", "000", "111", "000", "000"],
+  "+": ["000", "010", "111", "010", "000"],
+  "/": ["0001", "0010", "0100", "1000", "0000"],
+  ".": ["0", "0", "0", "0", "1"],
+  ",": ["0", "0", "0", "1", "1"],
+  ":": ["0", "1", "0", "1", "0"],
+  "!": ["1", "1", "1", "0", "1"],
+  "?": ["1110", "0001", "0110", "0000", "0100"],
+  "&": ["0110", "1000", "0111", "1001", "0111"],
+};
+
+function getMiniGlyphPattern(ch) {
+  return MINI_FONT[ch] || MINI_FONT["?"];
 }
-function miniTextWidth(str, spacing = 0) {
+function miniTextWidth(str, spacing = 1) {
   const s = String(str).toUpperCase();
   let width = 0;
   for (let i = 0; i < s.length; i++) {
-    width += getMiniGlyphCols(s[i]).length;
+    width += getMiniGlyphPattern(s[i])[0].length;
     if (i < s.length - 1) width += spacing;
   }
   return width;
 }
-function fitMiniText(str, maxW, spacing = 0) {
+function fitMiniText(str, maxW, spacing = 1) {
   const s = String(str).toUpperCase();
   if (miniTextWidth(s, spacing) <= maxW) return s;
   let out = "";
@@ -800,19 +832,18 @@ function fitMiniText(str, maxW, spacing = 0) {
   }
   return out;
 }
-function pxMiniText(ctx, str, x, y, color, maxW = PW, spacing = 0) {
+function pxMiniText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
   ctx.fillStyle = color;
   const s = fitMiniText(str, maxW, spacing);
   let cx = x;
   for (let i = 0; i < s.length; i++) {
-    const cols = getMiniGlyphCols(s[i]);
-    for (let col = 0; col < cols.length; col++) {
-      const mask = cols[col];
-      for (let row = 0; row < 5; row++) {
-        if (mask & (1 << row)) ctx.fillRect(cx + col, y + row, 1, 1);
+    const pattern = getMiniGlyphPattern(s[i]);
+    for (let row = 0; row < pattern.length; row++) {
+      for (let col = 0; col < pattern[row].length; col++) {
+        if (pattern[row][col] === "1") ctx.fillRect(cx + col, y + row, 1, 1);
       }
     }
-    cx += cols.length;
+    cx += pattern[0].length;
     if (i < s.length - 1) cx += spacing;
     if (cx - x >= maxW) break;
   }
@@ -927,8 +958,8 @@ function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
 function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#171d32", border = "#2d3756") {
   drawSoftCard(ctx, x, y, w, h, fill, border);
   drawSpriteRows(ctx, iconRows, x + 3, y + 3, accent);
-  pxMiniText(ctx, String(title).toUpperCase(), x + 14, y + 2, accent, w - 22, 0);
-  if (detail) pxMiniText(ctx, String(detail).toUpperCase(), x + 14, y + 7, "#dce6f7", w - 22, 0);
+  pxMiniText(ctx, String(title).toUpperCase(), x + 14, y + 2, accent, w - 22);
+  if (detail) pxMiniText(ctx, String(detail).toUpperCase(), x + 14, y + 7, "#dce6f7", w - 22);
 }
 
 // ── Mode-specific renderers ───────────────────────────────────────────────────
@@ -944,10 +975,10 @@ function renderDuties(ctx, duties, members, week) {
     const color = member?.color || COLORS[i % 4];
     drawSoftCard(ctx, 1, y, 62, 11, fills[i % fills.length], "#2c3553");
     drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
-    const dutyLabel = fitMiniText(duty.name, 40, 0).toUpperCase();
-    pxMiniText(ctx, dutyLabel, 14, y + 2, color, 40, 0);
-    const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 28, 0).toUpperCase();
-    pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 28, 0);
+    const dutyLabel = fitMiniText(duty.name, 40).toUpperCase();
+    pxMiniText(ctx, dutyLabel, 14, y + 2, color, 40);
+    const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 28).toUpperCase();
+    pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 28);
     drawMiniSakura(ctx, 56, y + 3, member ? "#ffd1eb" : "#556079", member ? "#fff8fc" : "#7d88a7");
   });
 }
@@ -961,8 +992,8 @@ function renderEvents(ctx, events) {
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
     drawMiniSakura(ctx, 17, 23, "#ff8cc2");
     drawMiniSakura(ctx, 42, 29, "#ffd56f");
-    pxMiniText(ctx, "NO PLANS", 18, 39, "#d8def0", 24, 0);
-    pxMiniText(ctx, "YASASHII", 18, 47, "#7382a8", 24, 0);
+    pxMiniText(ctx, "NO PLANS", 18, 39, "#d8def0", 24);
+    pxMiniText(ctx, "YASASHII", 18, 47, "#7382a8", 24);
     return;
   }
   const rowH = 15;
@@ -974,29 +1005,29 @@ function renderEvents(ctx, events) {
     drawSprite(ctx, "calendar", 4, y + 3, color);
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${d.toLocaleDateString("en", { month: "short" }).toUpperCase()} ${d.getDate()}`;
-    pxMiniText(ctx, dateStr, 14, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 14, 0);
-    pxMiniText(ctx, fitMiniText(ev.title, 34, 0), 14, y + 7, color, 34, 0);
+    pxMiniText(ctx, dateStr, 14, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 14);
+    pxMiniText(ctx, fitMiniText(ev.title, 34), 14, y + 7, color, 34);
     if (isToday) drawMiniHeart(ctx, 54, y + 4, "#ffd1eb");
   });
 }
 
 function renderGrocery(ctx, grocery) {
   const items = grocery.filter(g => !g.checked);
-  drawKawaiiHeader(ctx, "KAIMONO", "#ffd56f", "cart", "#ffd7ec");
+  drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", "cart", "#ffd7ec");
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
     drawMiniHeart(ctx, 16, 24, "#ff9dcc");
     drawMiniHeart(ctx, 43, 28, "#7be4d3");
-    pxMiniText(ctx, "ALL SET!", 19, 40, "#d9f7e7", 24, 0);
+    pxMiniText(ctx, "ALL SET!", 19, 40, "#d9f7e7", 24);
     return;
   }
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
   items.slice(0, 3).forEach((item, i) => {
     const y = 14 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(item.name, 32, 0), item.quantity ? fitMiniText(String(item.quantity), 12, 0) : "", COLORS[i % COLORS.length], SPRITES.cart, "#151b2b", "#2d3756");
+    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(item.name, 32), item.quantity ? fitMiniText(String(item.quantity), 12) : "", COLORS[i % COLORS.length], SPRITES.cart, "#151b2b", "#2d3756");
   });
-  if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 58, "#7f8baa", 20, 0);
+  if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 58, "#7f8baa", 20);
 }
 
 function renderTasks(ctx, tasks, members) {
@@ -1007,16 +1038,16 @@ function renderTasks(ctx, tasks, members) {
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
     drawMiniHeart(ctx, 15, 25, "#ffd56f");
     drawMiniHeart(ctx, 43, 27, "#ff9dcc");
-    pxMiniText(ctx, "DONE!", 24, 40, "#d8ffe2", 16, 0);
+    pxMiniText(ctx, "DONE!", 24, 40, "#d8ffe2", 16);
     return;
   }
   pending.slice(0, 3).forEach((task, i) => {
     const y = 14 + i * 15;
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(task.title, 32, 0), assignee ? fitMiniText(assignee.name, 12, 0) : "", color, SPRITES.check, "#15252a", "#2c4a50");
+    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(task.title, 32), assignee ? fitMiniText(assignee.name, 12) : "", color, SPRITES.check, "#15252a", "#2c4a50");
   });
-  if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20, 0);
+  if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
 
 function renderToCanvas(data, mode, time) {
