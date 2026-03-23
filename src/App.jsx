@@ -41,6 +41,10 @@ function shiftWeek(wk, delta) {
   return getWeekKey(ws);
 }
 function uid() { return Math.random().toString(36).slice(2, 9); }
+const PIXOO_TEXT_LIMIT = 12;
+function clampPixooText(value) {
+  return String(value ?? "").slice(0, PIXOO_TEXT_LIMIT);
+}
 
 function DEFAULT_DATA() {
   const week = getWeekKey();
@@ -414,7 +418,11 @@ function Duties({ data, save }) {
       {showAdd && (
         <Modal title="Add New Duty" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addDuty}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>NAME</label><input value={newDuty.name} onChange={e => setNewDuty(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Vacuuming" style={{ width: "100%" }} autoFocus onKeyDown={e => e.key === "Enter" && addDuty()} /></div>
+            <div>
+              <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>NAME</label>
+              <input value={newDuty.name} onChange={e => setNewDuty(p => ({ ...p, name: clampPixooText(e.target.value) }))} placeholder="e.g. Vacuuming" style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus onKeyDown={e => e.key === "Enter" && addDuty()} />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+            </div>
           </div>
         </Modal>
       )}
@@ -515,7 +523,11 @@ function Tasks({ data, save }) {
       {showAdd && (
         <Modal title="Add Task" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addTask} disabled={!newTask.title.trim()}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TASK</label><input value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} placeholder="What needs doing?" style={{ width: "100%" }} autoFocus onKeyDown={e => e.key === "Enter" && addTask()} /></div>
+            <div>
+              <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TASK</label>
+              <input value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: clampPixooText(e.target.value) }))} placeholder="What needs doing?" style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus onKeyDown={e => e.key === "Enter" && addTask()} />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>LIST</label><input value={newTask.list} onChange={e => setNewTask(p => ({ ...p, list: e.target.value }))} placeholder="General" style={{ width: "100%" }} /></div>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>DUE DATE</label><input type="date" value={newTask.dueDate} onChange={e => setNewTask(p => ({ ...p, dueDate: e.target.value }))} style={{ width: "100%" }} /></div>
@@ -577,7 +589,11 @@ function Events({ data, save }) {
       {showAdd && (
         <Modal title="Add Event" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addEvent} disabled={!newEv.title || !newEv.date}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TITLE</label><input value={newEv.title} onChange={e => setNewEv(p => ({ ...p, title: e.target.value }))} style={{ width: "100%" }} autoFocus /></div>
+            <div>
+              <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TITLE</label>
+              <input value={newEv.title} onChange={e => setNewEv(p => ({ ...p, title: clampPixooText(e.target.value) }))} style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>DATE</label><input type="date" value={newEv.date} onChange={e => setNewEv(p => ({ ...p, date: e.target.value }))} style={{ width: "100%" }} /></div>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TIME</label><input type="time" value={newEv.time} onChange={e => setNewEv(p => ({ ...p, time: e.target.value }))} style={{ width: "100%" }} /></div>
@@ -617,7 +633,10 @@ function Grocery({ data, save }) {
       <SectionTitle sub={`${unchecked.length} items needed · ${checked.length} checked off`}>GROCERY LIST</SectionTitle>
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input ref={inputRef} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Add item..." style={{ flex: 1, minWidth: 140 }} onKeyDown={e => e.key === "Enter" && add()} />
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <input ref={inputRef} value={form.name} onChange={e => setForm(p => ({ ...p, name: clampPixooText(e.target.value) }))} placeholder="Add item..." style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} onKeyDown={e => e.key === "Enter" && add()} />
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+          </div>
           <input value={form.quantity} onChange={e => setForm(p => ({ ...p, quantity: e.target.value }))} placeholder="Qty" style={{ width: 70 }} onKeyDown={e => e.key === "Enter" && add()} />
           <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ flex: 1, minWidth: 130 }}>{CATS.map(c => <option key={c}>{c}</option>)}</select>
           <Btn onClick={add}>Add</Btn>
