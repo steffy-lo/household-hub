@@ -45,6 +45,7 @@ const PIXOO_FRAME_MS = 400;
 const PIXOO_STATIC_FRAME_COUNT = Math.ceil(3000 / PIXOO_FRAME_MS);
 const PIXOO_SCROLL_PX_PER_FRAME = 2;
 const PIXOO_SCROLL_RIGHT_BUFFER = 4;
+const PIXOO_SCROLL_END_HOLD_FRAMES = 2;
 
 function DEFAULT_DATA() {
   const week = getWeekKey();
@@ -1018,17 +1019,17 @@ function getScrollOverflow(text, maxW) {
 
 function getModeScrollOverflow(data, mode) {
   if (mode === "duties") {
-    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name, 48)));
+    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name, 46)));
   }
   if (mode === "tasks") {
-    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title, 60)));
+    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title, 56)));
   }
   if (mode === "events") {
     const todayStr = new Date().toISOString().split("T")[0];
-    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 60)));
+    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 54)));
   }
   if (mode === "grocery") {
-    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name, 60)));
+    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name, 56)));
   }
   return 0;
 }
@@ -1036,11 +1037,11 @@ function getModeScrollOverflow(data, mode) {
 function buildPixooFramePlan(data) {
   return PIXOO_ROTATION_MODES.flatMap(mode => {
     const overflow = getModeScrollOverflow(data, mode);
-    const scrollFrames = overflow > 0 ? Math.ceil(overflow / PIXOO_SCROLL_PX_PER_FRAME) + 1 : 0;
+    const scrollFrames = overflow > 0 ? Math.ceil(overflow / PIXOO_SCROLL_PX_PER_FRAME) + 1 + PIXOO_SCROLL_END_HOLD_FRAMES : 0;
     const frameCount = overflow > 0 ? PIXOO_STATIC_FRAME_COUNT + scrollFrames : PIXOO_STATIC_FRAME_COUNT;
     return Array.from({ length: frameCount }, (_, index) => ({
       mode,
-      scrollStep: overflow > 0 ? Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) * PIXOO_SCROLL_PX_PER_FRAME : 0,
+      scrollStep: overflow > 0 ? Math.min(overflow, Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) * PIXOO_SCROLL_PX_PER_FRAME) : 0,
     }));
   });
 }
