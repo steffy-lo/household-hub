@@ -698,6 +698,11 @@ const FONT5X7 = {
 
 function charWidth(scale = 1) { return (5 + 1) * scale; }
 function textWidth(str, scale = 1) { return str.length * charWidth(scale); }
+function fitTextScale(str, maxW, maxScale = 1, minScale = 0.55) {
+  const fullWidth = textWidth(String(str), 1);
+  if (!fullWidth) return maxScale;
+  return Math.max(minScale, Math.min(maxScale, maxW / fullWidth));
+}
 
 function pxText(ctx, str, x, y, color, scale = 1, maxW = PW) {
   ctx.fillStyle = color;
@@ -798,12 +803,14 @@ function renderDuties(ctx, duties, members, week) {
     if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
     // Sprite — 8×8, vertically centred in top half of row
     drawSpriteRows(ctx, getDutySpriteRows(duty), 0, y + 1, color);
-    // Duty name — scale 1 (5px tall), fits ~9 chars in 54px
-    const dutyLabel = duty.name.toUpperCase().slice(0, 9);
-    pxText(ctx, dutyLabel, 10, y + 1, color, 1, 54);
+    // Duty and member labels shrink to fit instead of being hard-truncated.
+    const dutyLabel = duty.name.toUpperCase();
+    const dutyScale = fitTextScale(dutyLabel, 54, 1, 0.55);
+    pxText(ctx, dutyLabel, 10, y + 1, color, dutyScale, 54);
     // Member name — dimmed, below duty name
-    const memberLabel = member ? member.name.toUpperCase().slice(0, 9) : "UNASSIGNED";
-    pxText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", 1, 54);
+    const memberLabel = member ? member.name.toUpperCase() : "UNASSIGNED";
+    const memberScale = fitTextScale(memberLabel, 54, 1, 0.55);
+    pxText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", memberScale, 54);
   });
 }
 
