@@ -46,15 +46,15 @@ function DEFAULT_DATA() {
   const week = getWeekKey();
   return {
     members: [
-      { id: "m1", name: "Alex", color: "#22d3ee", emoji: "🧑" },
-      { id: "m2", name: "Jordan", color: "#f97316", emoji: "🧑" },
+      { id: "m1", name: "Alex", color: "#22d3ee" },
+      { id: "m2", name: "Jordan", color: "#f97316" },
     ],
     duties: [
-      { id: "d1", name: "Laundry", emoji: "🧺", weeklyRotation: { [week]: "m1" } },
-      { id: "d2", name: "Floor Cleaning", emoji: "🧹", weeklyRotation: { [week]: "m2" } },
-      { id: "d3", name: "Dishes", emoji: "🍽️", weeklyRotation: { [week]: "m1" } },
-      { id: "d4", name: "Trash", emoji: "🗑️", weeklyRotation: { [week]: "m2" } },
-      { id: "d5", name: "Bathroom", emoji: "🚿", weeklyRotation: { [week]: "m1" } },
+      { id: "d1", name: "Laundry", weeklyRotation: { [week]: "m1" } },
+      { id: "d2", name: "Floor Cleaning", weeklyRotation: { [week]: "m2" } },
+      { id: "d3", name: "Dishes", weeklyRotation: { [week]: "m1" } },
+      { id: "d4", name: "Trash", weeklyRotation: { [week]: "m2" } },
+      { id: "d5", name: "Bathroom", weeklyRotation: { [week]: "m1" } },
     ],
     tasks: [], events: [], grocery: [],
     pixoo: { ip: "", brightness: 70, displayMode: "duties" },
@@ -137,10 +137,9 @@ function SectionTitle({ children, sub, action }) {
 }
 function MemberBadge({ member, size = "sm" }) {
   if (!member) return null;
-  const dim = size === "sm" ? 22 : 30;
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `${member.color}22`, border: `1px solid ${member.color}44`, borderRadius: 999, padding: size === "sm" ? "2px 8px 2px 2px" : "3px 10px 3px 3px" }}>
-      <div style={{ width: dim, height: dim, borderRadius: "50%", background: `${member.color}33`, border: `2px solid ${member.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size === "sm" ? 10 : 14 }}>{member.emoji}</div>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `${member.color}22`, border: `1px solid ${member.color}44`, borderRadius: 999, padding: size === "sm" ? "4px 8px" : "5px 10px" }}>
+      <div style={{ width: size === "sm" ? 8 : 10, height: size === "sm" ? 8 : 10, borderRadius: "50%", background: member.color, boxShadow: `0 0 0 2px ${member.color}22` }} />
       <span style={{ fontSize: size === "sm" ? 11 : 13, fontWeight: 600, color: member.color }}>{member.name}</span>
     </div>
   );
@@ -251,8 +250,8 @@ function Dashboard({ data, setActiveTab }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {duties.map(d => (
               <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: T.surface, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>{d.emoji}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <SpritePreview rows={getDutySpriteRows(d)} color={d.assignee?.color || T.accent} scale={2.5} />
                   <span style={{ fontSize: 13, fontWeight: 500 }}>{d.name}</span>
                 </div>
                 {d.assignee ? <MemberBadge member={d.assignee} /> : <span style={{ fontSize: 11, color: T.muted }}>Unassigned</span>}
@@ -323,7 +322,7 @@ function Dashboard({ data, setActiveTab }) {
 function Duties({ data, save }) {
   const [viewWeek, setViewWeek] = useState(getWeekKey());
   const [showAdd, setShowAdd] = useState(false);
-  const [newDuty, setNewDuty] = useState({ name: "", emoji: "🧹" });
+  const [newDuty, setNewDuty] = useState({ name: "" });
   const [editingSpriteDutyId, setEditingSpriteDutyId] = useState(null);
   const [spriteDraft, setSpriteDraft] = useState(() => spriteRowsToGrid(SPRITES.default));
   const isCurrent = viewWeek === getWeekKey();
@@ -339,7 +338,7 @@ function Duties({ data, save }) {
   const addDuty = () => {
     if (!newDuty.name.trim()) return;
     save({ ...data, duties: [...data.duties, { id: uid(), ...newDuty, spriteRows: getDefaultSpriteRows(newDuty.name), weeklyRotation: {} }] });
-    setNewDuty({ name: "", emoji: "🧹" }); setShowAdd(false);
+    setNewDuty({ name: "" }); setShowAdd(false);
   };
   const editingDuty = data.duties.find(d => d.id === editingSpriteDutyId) || null;
   const openSpriteEditor = (duty) => {
@@ -384,7 +383,7 @@ function Duties({ data, save }) {
             <Card key={duty.id} glow={assignee?.color}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{duty.emoji}</div>
+                  <SpritePreview rows={spriteRows} color={assignee?.color || T.accent} scale={4} />
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{duty.name}</span>
                 </div>
                 <button onClick={() => save({ ...data, duties: data.duties.filter(d => d.id !== duty.id) })} style={{ background: "none", border: "none", color: T.muted, fontSize: 18 }}>×</button>
@@ -401,7 +400,7 @@ function Duties({ data, save }) {
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {data.members.map(m => (
-                  <button key={m.id} onClick={() => assign(duty.id, m.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: `2px solid ${m.id === assignedId ? m.color : T.border}`, background: m.id === assignedId ? `${m.color}22` : "transparent", color: m.id === assignedId ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.emoji} {m.name}</button>
+                  <button key={m.id} onClick={() => assign(duty.id, m.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: `2px solid ${m.id === assignedId ? m.color : T.border}`, background: m.id === assignedId ? `${m.color}22` : "transparent", color: m.id === assignedId ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.name}</button>
                 ))}
                 {assignedId && <button onClick={() => assign(duty.id, null)} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${T.border}`, background: "transparent", color: T.muted, fontSize: 12 }}>✕</button>}
               </div>
@@ -415,7 +414,6 @@ function Duties({ data, save }) {
       {showAdd && (
         <Modal title="Add New Duty" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addDuty}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>EMOJI</label><input value={newDuty.emoji} onChange={e => setNewDuty(p => ({ ...p, emoji: e.target.value }))} style={{ width: 80 }} /></div>
             <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>NAME</label><input value={newDuty.name} onChange={e => setNewDuty(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Vacuuming" style={{ width: "100%" }} autoFocus onKeyDown={e => e.key === "Enter" && addDuty()} /></div>
           </div>
         </Modal>
@@ -526,7 +524,7 @@ function Tasks({ data, save }) {
               <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 8 }}>ASSIGN TO</label>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                 <button onClick={() => setNewTask(p => ({ ...p, assignee: "" }))} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${!newTask.assignee ? T.accent : T.border}`, background: !newTask.assignee ? `${T.accent}22` : "transparent", color: T.mutedBright, fontSize: 12 }}>Anyone</button>
-                {data.members.map(m => <button key={m.id} onClick={() => setNewTask(p => ({ ...p, assignee: m.id }))} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${newTask.assignee === m.id ? m.color : T.border}`, background: newTask.assignee === m.id ? `${m.color}22` : "transparent", color: newTask.assignee === m.id ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.emoji} {m.name}</button>)}
+                {data.members.map(m => <button key={m.id} onClick={() => setNewTask(p => ({ ...p, assignee: m.id }))} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${newTask.assignee === m.id ? m.color : T.border}`, background: newTask.assignee === m.id ? `${m.color}22` : "transparent", color: newTask.assignee === m.id ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.name}</button>)}
               </div>
             </div>
           </div>
@@ -588,7 +586,7 @@ function Events({ data, save }) {
             <div>
               <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 8 }}>WHO'S INVOLVED</label>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                {data.members.map(m => { const sel = newEv.members.includes(m.id); return <button key={m.id} onClick={() => setNewEv(p => ({ ...p, members: sel ? p.members.filter(x => x !== m.id) : [...p.members, m.id] }))} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${sel ? m.color : T.border}`, background: sel ? `${m.color}22` : "transparent", color: sel ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.emoji} {m.name}</button>; })}
+                {data.members.map(m => { const sel = newEv.members.includes(m.id); return <button key={m.id} onClick={() => setNewEv(p => ({ ...p, members: sel ? p.members.filter(x => x !== m.id) : [...p.members, m.id] }))} style={{ padding: "5px 10px", borderRadius: 999, border: `2px solid ${sel ? m.color : T.border}`, background: sel ? `${m.color}22` : "transparent", color: sel ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.name}</button>; })}
               </div>
             </div>
           </div>
@@ -698,10 +696,33 @@ const FONT5X7 = {
 
 function charWidth(scale = 1) { return (5 + 1) * scale; }
 function textWidth(str, scale = 1) { return str.length * charWidth(scale); }
-function fitTextScale(str, maxW, maxScale = 1, minScale = 0.55) {
-  const fullWidth = textWidth(String(str), 1);
-  if (!fullWidth) return maxScale;
-  return Math.max(minScale, Math.min(maxScale, maxW / fullWidth));
+function getGlyphCols(ch) {
+  const cols = FONT5X7[ch] || FONT5X7["?"] || [0, 0, 0, 0, 0];
+  let first = 0, last = cols.length - 1;
+  while (first < cols.length && cols[first] === 0) first++;
+  while (last >= first && cols[last] === 0) last--;
+  if (first > last) return [0];
+  return cols.slice(first, last + 1);
+}
+function tightTextWidth(str, spacing = 0) {
+  const s = String(str).toUpperCase();
+  let width = 0;
+  for (let i = 0; i < s.length; i++) {
+    width += getGlyphCols(s[i]).length;
+    if (i < s.length - 1) width += spacing;
+  }
+  return width;
+}
+function fitTightText(str, maxW, spacing = 0) {
+  const s = String(str).toUpperCase();
+  if (tightTextWidth(s, spacing) <= maxW) return s;
+  let out = "";
+  for (const ch of s) {
+    const next = out + ch;
+    if (tightTextWidth(next, spacing) > maxW) break;
+    out = next;
+  }
+  return out;
 }
 
 function pxText(ctx, str, x, y, color, scale = 1, maxW = PW) {
@@ -722,6 +743,23 @@ function pxText(ctx, str, x, y, color, scale = 1, maxW = PW) {
     cx += charWidth(scale);
   }
 }
+function pxTightText(ctx, str, x, y, color, maxW = PW, spacing = 0) {
+  ctx.fillStyle = color;
+  const s = fitTightText(str, maxW, spacing);
+  let cx = x;
+  for (let i = 0; i < s.length; i++) {
+    const cols = getGlyphCols(s[i]);
+    for (let col = 0; col < cols.length; col++) {
+      const mask = cols[col];
+      for (let row = 0; row < 7; row++) {
+        if (mask & (1 << row)) ctx.fillRect(cx + col, y + row, 1, 1);
+      }
+    }
+    cx += cols.length;
+    if (i < s.length - 1) cx += spacing;
+    if (cx - x >= maxW) break;
+  }
+}
 
 // 8×8 sprites — each entry is 8 bytes (one per row, MSB = leftmost pixel)
 const SPRITES = {
@@ -735,7 +773,7 @@ const SPRITES = {
   check: [0x01, 0x02, 0x84, 0x48, 0x30, 0x20, 0x00, 0x00],
   clock: [0x3C, 0x42, 0x99, 0x89, 0x81, 0x42, 0x3C, 0x00],
   house: [0x10, 0x38, 0x7C, 0xFE, 0x6C, 0x6C, 0x6C, 0x00],
-  default: [0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x00],
+  default: [0x7E, 0x42, 0x5A, 0x42, 0x5A, 0x42, 0x42, 0x7E],
 };
 
 function getSpriteKey(name = "") {
@@ -803,14 +841,12 @@ function renderDuties(ctx, duties, members, week) {
     if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
     // Sprite — 8×8, vertically centred in top half of row
     drawSpriteRows(ctx, getDutySpriteRows(duty), 0, y + 1, color);
-    // Duty and member labels shrink to fit instead of being hard-truncated.
+    // Use a tighter pixel font variant so long labels stay crisp on the 64x64 canvas.
     const dutyLabel = duty.name.toUpperCase();
-    const dutyScale = fitTextScale(dutyLabel, 54, 1, 0.55);
-    pxText(ctx, dutyLabel, 10, y + 1, color, dutyScale, 54);
+    pxTightText(ctx, dutyLabel, 10, y + 1, color, 54, 0);
     // Member name — dimmed, below duty name
     const memberLabel = member ? member.name.toUpperCase() : "UNASSIGNED";
-    const memberScale = fitTextScale(memberLabel, 54, 1, 0.55);
-    pxText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", memberScale, 54);
+    pxTightText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", 54, 0);
   });
 }
 
@@ -856,53 +892,28 @@ function renderGrocery(ctx, grocery) {
   if (items.length > 4) pxText(ctx, `+${items.length - 4} MORE`, 5, 13 + 4 * 13, "#4a5568", 1, 54);
 }
 
-function renderClock(ctx, time) {
-  const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-  const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  // Date line — scale 1, centred at top
-  const dateStr = `${DAYS[time.getDay()]} ${MONTHS[time.getMonth()]} ${time.getDate()}`;
-  pxText(ctx, dateStr, Math.floor((PW - textWidth(dateStr, 1)) / 2), 2, "#22d3ee", 1);
-  // Time — scale 2 (10px tall digits), centred
-  const h = String(time.getHours()).padStart(2, "0");
-  const m = String(time.getMinutes()).padStart(2, "0");
-  const timeStr = `${h}:${m}`;
-  const tw = textWidth(timeStr, 2);
-  pxText(ctx, timeStr, Math.floor((PW - tw) / 2), 12, "#ffffff", 2);
-  // Seconds bar
-  ctx.fillStyle = "#0e3a45"; ctx.fillRect(2, 38, 60, 3);
-  ctx.fillStyle = "#22d3ee"; ctx.fillRect(2, 38, Math.round(time.getSeconds() / 59 * 60), 3);
-  // Day-of-week dots
-  for (let d = 0; d < 7; d++) {
-    const x = 1 + d * 9;
-    const active = d === time.getDay();
-    ctx.fillStyle = active ? "#22d3ee" : "#1e2d42";
-    ctx.fillRect(x + 1, 44, 5, active ? 3 : 1);
-    pxText(ctx, "SMTWTFS"[d], x, 50, active ? "#22d3ee" : "#2a3f5f", 1);
+function renderTasks(ctx, tasks, members) {
+  const pending = tasks.filter(t => !t.completed);
+  drawSprite(ctx, "check", 0, 0, "#22c55e");
+  pxText(ctx, `${pending.length} TO DO`, 10, 1, "#22c55e", 1, 54);
+  ctx.fillStyle = "#1a2535"; ctx.fillRect(0, 10, PW, 1);
+  if (pending.length === 0) {
+    drawSprite(ctx, "check", 28, 22, "#22c55e");
+    pxText(ctx, "ALL DONE!", Math.floor((PW - textWidth("ALL DONE!")) / 2), 36, "#22c55e");
+    return;
   }
-  // Seconds digits small at bottom right
-  const secStr = String(time.getSeconds()).padStart(2, "0");
-  pxText(ctx, secStr, PW - textWidth(secStr, 1) - 1, 57, "#2a3f5f", 1);
-}
-
-function renderCustom(ctx, text) {
-  const clean = String(text || "").toUpperCase().replace(/[^A-Z0-9 :\-./!?]/g, "");
-  const words = clean.split(" ");
-  const lines = [];
-  let cur = "";
-  for (const w of words) {
-    if ((cur + w).length > 10) { if (cur) lines.push(cur.trim()); cur = w + " "; }
-    else cur += w + " ";
-  }
-  if (cur.trim()) lines.push(cur.trim());
-  const COLORS = ["#22d3ee", "#f97316", "#facc15", "#22c55e"];
-  const totalH = lines.length * 9;
-  const startY = Math.max(0, Math.floor((PH - totalH) / 2));
-  lines.forEach((line, i) => {
-    pxText(ctx, line, Math.floor((PW - textWidth(line)) / 2), startY + i * 9, COLORS[i % 4]);
+  pending.slice(0, 4).forEach((task, i) => {
+    const y = 13 + i * 13;
+    const assignee = members.find(m => m.id === task.assignee);
+    const color = assignee?.color || ["#22d3ee", "#f97316", "#a855f7", "#facc15"][i % 4];
+    ctx.fillStyle = color; ctx.fillRect(0, y + 3, 3, 3);
+    pxTightText(ctx, task.title, 5, y, "#e2e8f0", 59, 0);
+    if (assignee) pxTightText(ctx, assignee.name, 36, y + 6, "#4a5568", 23, 0);
   });
+  if (pending.length > 4) pxText(ctx, `+${pending.length - 4} MORE`, 5, 13 + 4 * 13, "#4a5568", 1, 54);
 }
 
-function renderToCanvas(data, mode, customText, time) {
+function renderToCanvas(data, mode, time) {
   const canvas = document.createElement("canvas");
   canvas.width = PW; canvas.height = PH;
   const ctx = canvas.getContext("2d");
@@ -910,10 +921,9 @@ function renderToCanvas(data, mode, customText, time) {
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, PW, PH);
   const week = getWeekKey();
   if (mode === "duties") renderDuties(ctx, data.duties, data.members, week);
+  if (mode === "tasks") renderTasks(ctx, data.tasks, data.members);
   if (mode === "events") renderEvents(ctx, data.events);
   if (mode === "grocery") renderGrocery(ctx, data.grocery);
-  if (mode === "clock") renderClock(ctx, time);
-  if (mode === "custom") renderCustom(ctx, customText);
   return canvas;
 }
 
@@ -941,24 +951,29 @@ function canvasToPixooBase64(canvas) {
 }
 
 // ─── PIXOO ────────────────────────────────────────────────────────────────────
+const PIXOO_ROTATION_MODES = ["duties", "tasks", "events", "grocery"];
+
 function Pixoo({ data, save }) {
   const [ip, setIp] = useState(data.pixoo?.ip || "");
   const [brightness, setBrightness] = useState(data.pixoo?.brightness ?? 70);
-  const [mode, setMode] = useState(data.pixoo?.displayMode || "duties");
-  const [customText, setCustomText] = useState("");
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
   const [sendLog, setSendLog] = useState([]);
   const [time, setTime] = useState(new Date());
+  const [previewIndex, setPreviewIndex] = useState(0);
   const previewRef = useRef();
 
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
-  useEffect(() => { drawPreview(); }, [mode, data, time, customText]);
+  useEffect(() => {
+    const t = setInterval(() => setPreviewIndex(i => (i + 1) % PIXOO_ROTATION_MODES.length), 3000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => { drawPreview(); }, [previewIndex, data, time]);
 
   const drawPreview = () => {
     const canvas = previewRef.current;
     if (!canvas) return;
-    const src = renderToCanvas(data, mode, customText, time);
+    const src = renderToCanvas(data, PIXOO_ROTATION_MODES[previewIndex], time);
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     // Scale up 4× inside the canvas itself so text is readable in the UI
@@ -1029,22 +1044,22 @@ function Pixoo({ data, save }) {
       return res.ok;
     };
 
-    // Step 1: send the pixel frame
-    const canvas = renderToCanvas(data, mode, customText, time);
-    const base64rgb = canvasToPixooBase64(canvas);
+    // Step 1: build the rotating household animation
+    const frames = PIXOO_ROTATION_MODES.map(frameMode => renderToCanvas(data, frameMode, time));
+    const base64rgb = frames.map(canvasToPixooBase64).join("");
     const picId = await getNextPicId(log);
     if (picId == null) {
       setSending(false);
       return;
     }
 
-    // Verify payload: 64×64×3 = 12288 bytes → 16384 base64 chars
-    const expectedLen = PW * PH * 3 * 4 / 3; // = 16384
+    // Verify payload: 4 frames × (64×64×3 bytes → 16384 base64 chars)
+    const expectedLen = PIXOO_ROTATION_MODES.length * (PW * PH * 3 * 4 / 3);
     if (base64rgb.length !== expectedLen) {
       log.push({ label: `Payload size error: got ${base64rgb.length} chars, expected ${expectedLen}`, ok: false, detail: "Canvas encoding failed" });
       setSendLog([...log]); setSending(false); return;
     }
-    log.push({ label: `Payload verified: ${base64rgb.length} chars (${PW}×${PH}×3 RGB bytes)`, ok: true, detail: "" });
+    log.push({ label: `Payload verified: ${base64rgb.length} chars (${PIXOO_ROTATION_MODES.length} frames)`, ok: true, detail: "" });
     setSendLog([...log]);
 
     await step("Switch to Custom channel (SelectIndex: 3)", {
@@ -1054,24 +1069,16 @@ function Pixoo({ data, save }) {
 
     await step("Send pixel frame (Draw/SendHttpGif)", {
       Command: "Draw/SendHttpGif",
-      PicNum: 1,
+      PicNum: PIXOO_ROTATION_MODES.length,
       PicWidth: 64,
       PicOffset: 0,
       PicID: picId,
-      PicSpeed: 1000,
+      PicSpeed: 3000,
       PicData: base64rgb,
     });
 
     setSending(false);
   };
-
-  const MODES = [
-    { id: "duties", label: "Weekly Duties", icon: "household" },
-    { id: "events", label: "Next Events", icon: "calendar" },
-    { id: "grocery", label: "Grocery List", icon: "cart" },
-    { id: "clock", label: "Clock", icon: "clock" },
-    { id: "custom", label: "Custom Text", icon: "default" },
-  ];
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
@@ -1118,15 +1125,24 @@ function Pixoo({ data, save }) {
         </Card>
 
         <Card>
-          <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 14 }}>DISPLAY MODE</div>
-          {MODES.map(m => (
-            <button key={m.id} onClick={() => { setMode(m.id); save({ ...data, pixoo: { ...data.pixoo, displayMode: m.id } }); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 12px", borderRadius: 9, border: `2px solid ${mode === m.id ? T.accent : T.border}`, background: mode === m.id ? `${T.accent}12` : T.surface, marginBottom: 7, cursor: "pointer" }}>
-              <SpriteIcon spriteKey={m.icon} color={mode === m.id ? T.accent : T.muted} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: mode === m.id ? T.accent : T.text }}>{m.label}</span>
-              {mode === m.id && <span style={{ marginLeft: "auto", color: T.accent, fontSize: 16 }}>✓</span>}
-            </button>
-          ))}
-          {mode === "custom" && <input value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Your message..." style={{ width: "100%", marginBottom: 10 }} maxLength={60} />}
+          <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 14 }}>DISPLAY ROTATION</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+            {[
+              { label: "Weekly Duties", icon: "household" },
+              { label: "Pending Tasks", icon: "check" },
+              { label: "Upcoming Events", icon: "calendar" },
+              { label: "Grocery List", icon: "cart" },
+            ].map((item, i) => (
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9, border: `1px solid ${previewIndex === i ? T.accent : T.border}`, background: previewIndex === i ? `${T.accent}12` : T.surface }}>
+                <SpriteIcon spriteKey={item.icon} color={previewIndex === i ? T.accent : T.muted} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: previewIndex === i ? T.accent : T.text }}>{item.label}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: previewIndex === i ? T.accent : T.muted }}>{previewIndex === i ? "LIVE" : "NEXT"}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.7, marginBottom: 10 }}>
+            The Pixoo animation rotates through all four household boards every 3 seconds.
+          </div>
           <Btn onClick={sendToPixoo} disabled={sending || !ip} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
             {sending ? "Sending..." : "Send to Pixoo64"}
           </Btn>
@@ -1175,9 +1191,9 @@ function SpriteIcon({ spriteKey, color }) {
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function Settings({ data, save }) {
-  const [newM, setNewM] = useState({ name: "", emoji: "🧑", color: "#22d3ee" });
+  const [newM, setNewM] = useState({ name: "", color: "#22d3ee" });
   const COLORS = ["#22d3ee", "#f97316", "#22c55e", "#a855f7", "#facc15", "#ef4444", "#ec4899", "#3b82f6"];
-  const addMember = () => { if (!newM.name.trim()) return; save({ ...data, members: [...data.members, { id: uid(), ...newM }] }); setNewM({ name: "", emoji: "🧑", color: "#22d3ee" }); };
+  const addMember = () => { if (!newM.name.trim()) return; save({ ...data, members: [...data.members, { id: uid(), ...newM }] }); setNewM({ name: "", color: "#22d3ee" }); };
   const updateMember = (id, updates) => save({ ...data, members: data.members.map(m => m.id === id ? { ...m, ...updates } : m) });
   const exportData = () => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "household-hub-backup.json"; a.click(); };
   const importData = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { try { save(JSON.parse(ev.target.result)); } catch { alert("Invalid file"); } }; r.readAsText(f); };
@@ -1189,8 +1205,7 @@ function Settings({ data, save }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
           {data.members.map(m => (
             <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, flexWrap: "wrap" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${m.color}22`, border: `2px solid ${m.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{m.emoji}</div>
-              <input value={m.emoji} onChange={e => updateMember(m.id, { emoji: e.target.value })} style={{ width: 48 }} />
+              <div style={{ width: 14, height: 14, borderRadius: "50%", background: m.color, boxShadow: `0 0 0 3px ${m.color}22` }} />
               <input value={m.name} onChange={e => updateMember(m.id, { name: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
               <div style={{ display: "flex", gap: 4 }}>{COLORS.map(c => <button key={c} onClick={() => updateMember(m.id, { color: c })} style={{ width: 18, height: 18, borderRadius: "50%", background: c, border: `2px solid ${m.color === c ? "#fff" : "transparent"}` }} />)}</div>
               <button onClick={() => { if (data.members.length > 1) save({ ...data, members: data.members.filter(x => x.id !== m.id) }); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 18 }} disabled={data.members.length <= 1}>×</button>
@@ -1198,7 +1213,6 @@ function Settings({ data, save }) {
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input value={newM.emoji} onChange={e => setNewM(p => ({ ...p, emoji: e.target.value }))} style={{ width: 52 }} />
           <input value={newM.name} onChange={e => setNewM(p => ({ ...p, name: e.target.value }))} placeholder="Name" style={{ flex: 1, minWidth: 100 }} onKeyDown={e => e.key === "Enter" && addMember()} />
           <div style={{ display: "flex", gap: 4 }}>{COLORS.map(c => <button key={c} onClick={() => setNewM(p => ({ ...p, color: c }))} style={{ width: 18, height: 18, borderRadius: "50%", background: c, border: `2px solid ${newM.color === c ? "#fff" : "transparent"}` }} />)}</div>
           <Btn onClick={addMember} disabled={!newM.name.trim()}>+ Add Member</Btn>
