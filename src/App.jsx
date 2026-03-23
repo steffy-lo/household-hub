@@ -828,89 +828,137 @@ function drawSpriteRows(ctx, rows, x, y, color) {
   }
 }
 
+function drawPixelPattern(ctx, pattern, x, y, color) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < pattern.length; r++) {
+    for (let c = 0; c < pattern[r].length; c++) {
+      if (pattern[r][c] === "1") ctx.fillRect(x + c, y + r, 1, 1);
+    }
+  }
+}
+
+function drawMiniHeart(ctx, x, y, color) {
+  drawPixelPattern(ctx, ["01010", "11111", "11111", "01110", "00100"], x, y, color);
+}
+
+function drawMiniSakura(ctx, x, y, color, center = "#fff4f8") {
+  drawPixelPattern(ctx, ["01010", "11111", "01110", "11111", "01010"], x, y, color);
+  ctx.fillStyle = center;
+  ctx.fillRect(x + 2, y + 2, 1, 1);
+}
+
+function drawSoftCard(ctx, x, y, w, h, fill, border = "#2b3551") {
+  ctx.fillStyle = fill;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = border;
+  ctx.fillRect(x, y, w, 1);
+  ctx.fillRect(x, y + h - 1, w, 1);
+  ctx.fillRect(x, y, 1, h);
+  ctx.fillRect(x + w - 1, y, 1, h);
+}
+
+function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
+  drawSoftCard(ctx, 0, 0, PW, 11, "#141a30", "#26304a");
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 10, PW, 1);
+  drawSprite(ctx, iconKey, 2, 1, color);
+  pxTightText(ctx, label, 12, 2, color, 38, 0);
+  drawMiniHeart(ctx, 52, 2, accent);
+  drawMiniHeart(ctx, 58, 2, "#ffffff");
+}
+
 // ── Mode-specific renderers ───────────────────────────────────────────────────
 function renderDuties(ctx, duties, members, week) {
-  const COLORS = ["#22d3ee", "#f97316", "#facc15", "#22c55e"];
+  const COLORS = ["#ff68b3", "#7bd7ff", "#ffd76d", "#88f0b7"];
+  const fills = ["#2b1730", "#17233c", "#2f2518", "#182a24"];
   const rows = duties.slice(0, 4);
-  const rowH = Math.floor(PH / rows.length); // 16px per row
+  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", "house", "#ffd1eb");
+  const rowH = 13;
   rows.forEach((duty, i) => {
-    const y = i * rowH;
+    const y = 12 + i * rowH;
     const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
     const color = member?.color || COLORS[i % 4];
-    // Row separator
-    if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
-    // Sprite — 8×8, vertically centred in top half of row
-    drawSpriteRows(ctx, getDutySpriteRows(duty), 0, y + 1, color);
-    // Use a tighter pixel font variant so long labels stay crisp on the 64x64 canvas.
+    drawSoftCard(ctx, 1, y, 62, 12, fills[i % fills.length], "#2c3553");
+    drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
     const dutyLabel = duty.name.toUpperCase();
-    pxTightText(ctx, dutyLabel, 10, y + 1, color, 54, 0);
-    // Member name — dimmed, below duty name
+    pxTightText(ctx, dutyLabel, 14, y + 1, color, 40, 0);
     const memberLabel = member ? member.name.toUpperCase() : "UNASSIGNED";
-    pxTightText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", 54, 0);
+    pxTightText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 34, 0);
+    drawMiniSakura(ctx, 56, y + 3, member ? "#ffd1eb" : "#556079", member ? "#fff8fc" : "#7d88a7");
   });
 }
 
 function renderEvents(ctx, events) {
   const todayStr = new Date().toISOString().split("T")[0];
   const upcoming = [...events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", "calendar", "#ffd4ef");
   if (!upcoming.length) {
-    drawSprite(ctx, "calendar", 28, 22, "#4a5568");
-    const msg = "NO EVENTS";
-    pxText(ctx, msg, Math.floor((PW - textWidth(msg)) / 2), 44, "#4a5568");
+    drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
+    drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
+    drawMiniSakura(ctx, 17, 23, "#ff8cc2");
+    drawMiniSakura(ctx, 42, 29, "#ffd56f");
+    pxTightText(ctx, "NO PLANS", 14, 39, "#d8def0", 36, 0);
+    pxTightText(ctx, "YASASHII DAY", 9, 49, "#7382a8", 46, 0);
     return;
   }
-  const rowH = Math.floor(PH / upcoming.length);
+  const rowH = 16;
   upcoming.forEach((ev, i) => {
-    const y = i * rowH;
+    const y = 13 + i * rowH;
     const isToday = ev.date === todayStr;
-    const color = isToday ? "#a855f7" : "#22d3ee";
-    if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
-    drawSprite(ctx, "calendar", 0, y + (rowH > 14 ? 3 : 0), color);
+    const color = isToday ? "#ff8bc7" : ["#9cb5ff", "#ffd56f", "#7be4d3"][i % 3];
+    drawSoftCard(ctx, 2, y, 60, 14, "#171d32", "#2d3756");
+    drawSprite(ctx, "calendar", 4, y + 3, color);
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${d.toLocaleDateString("en", { month: "short" }).toUpperCase()} ${d.getDate()}`;
-    pxText(ctx, dateStr, 10, y + 1, isToday ? "#a855f7" : "#64748b", 1, 54);
-    pxText(ctx, ev.title, 10, y + 9, color, 1, 54);
+    pxTightText(ctx, dateStr, 14, y + 1, isToday ? "#ffd1eb" : "#8f9ab6", 18, 0);
+    pxTightText(ctx, ev.title, 14, y + 7, color, 40, 0);
+    if (isToday) drawMiniHeart(ctx, 54, y + 4, "#ffd1eb");
   });
 }
 
 function renderGrocery(ctx, grocery) {
   const items = grocery.filter(g => !g.checked);
-  drawSprite(ctx, "cart", 0, 0, "#facc15");
-  pxText(ctx, `${items.length} TO BUY`, 10, 1, "#facc15", 1, 54);
-  ctx.fillStyle = "#1a2535"; ctx.fillRect(0, 10, PW, 1);
+  drawKawaiiHeader(ctx, "KAIMONO", "#ffd56f", "cart", "#ffd7ec");
   if (items.length === 0) {
-    drawSprite(ctx, "check", 28, 22, "#22c55e");
-    pxText(ctx, "ALL DONE!", Math.floor((PW - textWidth("ALL DONE!")) / 2), 36, "#22c55e");
+    drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
+    drawSprite(ctx, "cart", 27, 21, "#ffd56f");
+    drawMiniHeart(ctx, 16, 24, "#ff9dcc");
+    drawMiniHeart(ctx, 43, 28, "#7be4d3");
+    pxTightText(ctx, "ALL SET!", 17, 38, "#d9f7e7", 30, 0);
     return;
   }
-  const COLORS = ["#22d3ee", "#f97316", "#a855f7", "#22c55e"];
-  items.slice(0, 4).forEach((item, i) => {
-    const y = 13 + i * 13;
-    ctx.fillStyle = COLORS[i % 4]; ctx.fillRect(0, y + 3, 3, 3);
-    pxText(ctx, item.name, 5, y, "#e2e8f0", 1, 59);
+  const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
+  items.slice(0, 3).forEach((item, i) => {
+    const y = 14 + i * 15;
+    drawSoftCard(ctx, 2, y, 60, 13, "#151b2b", "#2d3756");
+    ctx.fillStyle = COLORS[i % COLORS.length]; ctx.fillRect(4, y + 5, 3, 3);
+    pxTightText(ctx, item.name, 10, y + 3, "#f2f4fb", 40, 0);
+    if (item.quantity) pxTightText(ctx, String(item.quantity).toUpperCase(), 44, y + 3, "#8f9ab6", 14, 0);
   });
-  if (items.length > 4) pxText(ctx, `+${items.length - 4} MORE`, 5, 13 + 4 * 13, "#4a5568", 1, 54);
+  if (items.length > 3) pxTightText(ctx, `+${items.length - 3} MORE`, 18, 59, "#7f8baa", 28, 0);
 }
 
 function renderTasks(ctx, tasks, members) {
   const pending = tasks.filter(t => !t.completed);
-  drawSprite(ctx, "check", 0, 0, "#22c55e");
-  pxText(ctx, `${pending.length} TO DO`, 10, 1, "#22c55e", 1, 54);
-  ctx.fillStyle = "#1a2535"; ctx.fillRect(0, 10, PW, 1);
+  drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", "check", "#d6ffe3");
   if (pending.length === 0) {
-    drawSprite(ctx, "check", 28, 22, "#22c55e");
-    pxText(ctx, "ALL DONE!", Math.floor((PW - textWidth("ALL DONE!")) / 2), 36, "#22c55e");
+    drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
+    drawSprite(ctx, "check", 28, 21, "#8af0a8");
+    drawMiniHeart(ctx, 15, 25, "#ffd56f");
+    drawMiniHeart(ctx, 43, 27, "#ff9dcc");
+    pxTightText(ctx, "DONE!", 22, 39, "#d8ffe2", 22, 0);
     return;
   }
-  pending.slice(0, 4).forEach((task, i) => {
-    const y = 13 + i * 13;
+  pending.slice(0, 3).forEach((task, i) => {
+    const y = 14 + i * 15;
     const assignee = members.find(m => m.id === task.assignee);
-    const color = assignee?.color || ["#22d3ee", "#f97316", "#a855f7", "#facc15"][i % 4];
-    ctx.fillStyle = color; ctx.fillRect(0, y + 3, 3, 3);
-    pxTightText(ctx, task.title, 5, y, "#e2e8f0", 59, 0);
-    if (assignee) pxTightText(ctx, assignee.name, 36, y + 6, "#4a5568", 23, 0);
+    const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
+    drawSoftCard(ctx, 2, y, 60, 13, "#15252a", "#2c4a50");
+    drawSprite(ctx, "check", 4, y + 2, color);
+    pxTightText(ctx, task.title, 14, y + 3, "#f0fff4", 34, 0);
+    if (assignee) pxTightText(ctx, assignee.name, 40, y + 3, "#87a897", 18, 0);
   });
-  if (pending.length > 4) pxText(ctx, `+${pending.length - 4} MORE`, 5, 13 + 4 * 13, "#4a5568", 1, 54);
+  if (pending.length > 3) pxTightText(ctx, `+${pending.length - 3} MORE`, 18, 59, "#7f9b89", 28, 0);
 }
 
 function renderToCanvas(data, mode, time) {
