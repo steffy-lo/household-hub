@@ -893,7 +893,7 @@ function pxDetailText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
 function pxDetailTextScrolled(ctx, str, x, y, color, maxW = PW, scrollPx = 0, spacing = 1) {
   ctx.save();
   ctx.beginPath();
-  ctx.rect(x, y, maxW, 5);
+  ctx.rect(x, y, Math.max(0, maxW - PIXOO_SCROLL_RIGHT_BUFFER), 5);
   ctx.clip();
   ctx.fillStyle = color;
   const s = String(str);
@@ -1013,7 +1013,7 @@ function formatCompactDate(dateStr) {
 }
 
 function getScrollOverflow(text, maxW) {
-  return Math.max(0, detailTextWidth(String(text || "")) - Math.max(0, maxW + PIXOO_SCROLL_RIGHT_BUFFER));
+  return Math.max(0, detailTextWidth(String(text || "")) - Math.max(0, maxW));
 }
 
 function getModeScrollOverflow(data, mode) {
@@ -1080,8 +1080,8 @@ function renderEvents(ctx, events, scrollStep = 0) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-    pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 60, scrollStep);
-    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 60);
+    pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 54, scrollStep);
+    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 54);
   });
 }
 
@@ -1117,7 +1117,7 @@ function renderTasks(ctx, tasks, members, scrollStep = 0) {
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
     const detail = task.dueDate ? formatCompactDate(task.dueDate) : assignee?.name || "";
-    drawInfoRow(ctx, 2, y, 60, 13, "", detail, color, null, "#15252a", "#2c4a50");
+    drawInfoRow(ctx, 2, y, 60, 13, "", detail, color, null, "#182331", "#2c3551");
     pxDetailTextScrolled(ctx, task.title, 6, y + 2, color, 56, scrollStep);
   });
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
