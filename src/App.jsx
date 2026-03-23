@@ -41,10 +41,9 @@ function shiftWeek(wk, delta) {
   return getWeekKey(ws);
 }
 function uid() { return Math.random().toString(36).slice(2, 9); }
-const PIXOO_TEXT_LIMIT = 12;
-function clampPixooText(value) {
-  return String(value ?? "").slice(0, PIXOO_TEXT_LIMIT);
-}
+const PIXOO_SCROLL_CHAR_LIMIT = 13;
+const PIXOO_FRAME_MS = 400;
+const PIXOO_STATIC_FRAME_COUNT = Math.ceil(3000 / PIXOO_FRAME_MS);
 
 function DEFAULT_DATA() {
   const week = getWeekKey();
@@ -420,8 +419,8 @@ function Duties({ data, save }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>NAME</label>
-              <input value={newDuty.name} onChange={e => setNewDuty(p => ({ ...p, name: clampPixooText(e.target.value) }))} placeholder="e.g. Vacuuming" style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus onKeyDown={e => e.key === "Enter" && addDuty()} />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+              <input value={newDuty.name} onChange={e => setNewDuty(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Vacuuming" style={{ width: "100%" }} autoFocus onKeyDown={e => e.key === "Enter" && addDuty()} />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>If this goes over 12 characters, Pixoo will scroll it before rotating.</div>
             </div>
           </div>
         </Modal>
@@ -525,8 +524,8 @@ function Tasks({ data, save }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TASK</label>
-              <input value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: clampPixooText(e.target.value) }))} placeholder="What needs doing?" style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus onKeyDown={e => e.key === "Enter" && addTask()} />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+              <input value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} placeholder="What needs doing?" style={{ width: "100%" }} autoFocus onKeyDown={e => e.key === "Enter" && addTask()} />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>If this goes over 12 characters, Pixoo will scroll it before rotating.</div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>LIST</label><input value={newTask.list} onChange={e => setNewTask(p => ({ ...p, list: e.target.value }))} placeholder="General" style={{ width: "100%" }} /></div>
@@ -591,8 +590,8 @@ function Events({ data, save }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>TITLE</label>
-              <input value={newEv.title} onChange={e => setNewEv(p => ({ ...p, title: clampPixooText(e.target.value) }))} style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} autoFocus />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+              <input value={newEv.title} onChange={e => setNewEv(p => ({ ...p, title: e.target.value }))} style={{ width: "100%" }} autoFocus />
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>If this goes over 12 characters, Pixoo will scroll it before rotating.</div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>DATE</label><input type="date" value={newEv.date} onChange={e => setNewEv(p => ({ ...p, date: e.target.value }))} style={{ width: "100%" }} /></div>
@@ -634,8 +633,8 @@ function Grocery({ data, save }) {
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 140 }}>
-            <input ref={inputRef} value={form.name} onChange={e => setForm(p => ({ ...p, name: clampPixooText(e.target.value) }))} placeholder="Add item..." style={{ width: "100%" }} maxLength={PIXOO_TEXT_LIMIT} onKeyDown={e => e.key === "Enter" && add()} />
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Capped at 12 characters including spaces for Pixoo display.</div>
+            <input ref={inputRef} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Add item..." style={{ width: "100%" }} onKeyDown={e => e.key === "Enter" && add()} />
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>If this goes over 12 characters, Pixoo will scroll it before rotating.</div>
           </div>
           <input value={form.quantity} onChange={e => setForm(p => ({ ...p, quantity: e.target.value }))} placeholder="Qty" style={{ width: 70 }} onKeyDown={e => e.key === "Enter" && add()} />
           <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ flex: 1, minWidth: 130 }}>{CATS.map(c => <option key={c}>{c}</option>)}</select>
@@ -991,34 +990,71 @@ function formatCompactDate(dateStr) {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
 }
 
-// ── Mode-specific renderers ───────────────────────────────────────────────────
-function renderDuties(ctx, duties, members, week) {
-  const COLORS = ["#ff68b3", "#7bd7ff", "#ffd76d", "#88f0b7"];
-  const rows = duties.slice(0, 4);
-  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", null, "#ffd1eb");
-  const rowH = 12;
-  rows.forEach((duty, i) => {
-    const y = 12 + i * rowH;
-    const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
-    const color = member?.color || COLORS[i % 4];
-    drawSoftCard(ctx, 1, y, 62, 11, "#171d32", "#2d3756");
-    drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
-    const dutyLabel = fitDetailText(duty.name, 44);
-    pxDetailText(ctx, dutyLabel, 14, y + 2, color, 44);
-    const memberLabel = fitDetailText(member ? member.name : "Unassigned", 40);
-    pxDetailText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 40);
+function getScrollOverflow(text, limit = PIXOO_SCROLL_CHAR_LIMIT) {
+  return Math.max(0, String(text || "").length - limit);
+}
+
+function getScrollingText(text, scrollStep, limit = PIXOO_SCROLL_CHAR_LIMIT) {
+  const value = String(text || "");
+  if (value.length <= limit) return value;
+  const offset = Math.min(scrollStep, value.length - limit);
+  return value.slice(offset, offset + limit);
+}
+
+function getModeScrollOverflow(data, mode, week = getWeekKey()) {
+  if (mode === "duties") {
+    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name)));
+  }
+  if (mode === "tasks") {
+    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title)));
+  }
+  if (mode === "events") {
+    const todayStr = new Date().toISOString().split("T")[0];
+    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title)));
+  }
+  if (mode === "grocery") {
+    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name)));
+  }
+  return 0;
+}
+
+function buildPixooFramePlan(data) {
+  const week = getWeekKey();
+  return PIXOO_ROTATION_MODES.flatMap(mode => {
+    const overflow = getModeScrollOverflow(data, mode, week);
+    const frameCount = overflow > 0 ? PIXOO_STATIC_FRAME_COUNT + overflow : PIXOO_STATIC_FRAME_COUNT;
+    return Array.from({ length: frameCount }, (_, index) => ({
+      mode,
+      scrollStep: overflow > 0 ? Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) : 0,
+    }));
   });
 }
 
-function renderEvents(ctx, events) {
+// ── Mode-specific renderers ───────────────────────────────────────────────────
+function renderDuties(ctx, duties, members, week, scrollStep = 0) {
+  const COLORS = ["#ff68b3", "#7bd7ff", "#ffd76d", "#88f0b7"];
+  const rows = duties.slice(0, 4);
+  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", null, "#ffd1eb");
+  const rowH = 15;
+  rows.forEach((duty, i) => {
+    const y = 13 + i * rowH;
+    const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
+    const color = member?.color || COLORS[i % 4];
+    const dutyLabel = fitDetailText(getScrollingText(duty.name, scrollStep, 14), 48);
+    const memberLabel = fitDetailText(member ? member.name : "Unassigned", 58);
+    drawInfoRow(ctx, 2, y, 60, 13, dutyLabel, memberLabel, color, getDutySpriteRows(duty), "#171d32", "#2d3756");
+  });
+}
+
+function renderEvents(ctx, events, scrollStep = 0) {
   const todayStr = new Date().toISOString().split("T")[0];
   const upcoming = [...events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
   drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", null, "#ffd4ef");
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
-    pxMiniText(ctx, "NO PLANS", 18, 39, "#d8def0", 24);
-    pxMiniText(ctx, "ALL CLEAR", 14, 47, "#7382a8", 32);
+    pxMiniText(ctx, "NO PLANS", 18, 33, "#d8def0", 58);
+    pxMiniText(ctx, "ALL CLEAR", 14, 47, "#7382a8", 58);
     return;
   }
   const rowH = 15;
@@ -1029,58 +1065,58 @@ function renderEvents(ctx, events) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-    pxDetailText(ctx, fitDetailText(ev.title, 52), 5, y + 7, color, 60);
+    pxDetailText(ctx, fitDetailText(getScrollingText(ev.title, scrollStep, 14), 60), 5, y + 7, color, 60);
     pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 60);
   });
 }
 
-function renderGrocery(ctx, grocery) {
+function renderGrocery(ctx, grocery, scrollStep = 0) {
   const items = grocery.filter(g => !g.checked);
   drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", null, "#ffd7ec");
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
-    pxMiniText(ctx, "ALL SET!", 19, 40, "#d9f7e7", 24);
+    pxMiniText(ctx, "DONE!", 23, 33, "#d9f7e7", 58);
     return;
   }
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
   items.slice(0, 3).forEach((item, i) => {
-    const y = 14 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(item.name, 48), item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
+    const y = 13 + i * 15;
+    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(getScrollingText(item.name, scrollStep, 15), 60), item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
   });
   if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 60, "#7f8baa", 20);
 }
 
-function renderTasks(ctx, tasks, members) {
+function renderTasks(ctx, tasks, members, scrollStep = 0) {
   const pending = tasks.filter(t => !t.completed);
   drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", null, "#d6ffe3");
   if (pending.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
-    pxMiniText(ctx, "DONE!", 24, 40, "#d8ffe2", 16);
+    pxMiniText(ctx, "DONE!", 23, 33, "#d8ffe2", 58);
     return;
   }
   pending.slice(0, 3).forEach((task, i) => {
-    const y = 14 + i * 15;
+    const y = 13 + i * 15;
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
     const detail = task.dueDate ? formatCompactDate(task.dueDate) : assignee?.name || "";
-    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(task.title, 48), detail, color, null, "#15252a", "#2c4a50");
+    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(getScrollingText(task.title, scrollStep, 14), 60), detail, color, null, "#15252a", "#2c4a50");
   });
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
 
-function renderToCanvas(data, mode) {
+function renderToCanvas(data, mode, scrollStep = 0) {
   const canvas = document.createElement("canvas");
   canvas.width = PW; canvas.height = PH;
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, PW, PH);
   const week = getWeekKey();
-  if (mode === "duties") renderDuties(ctx, data.duties, data.members, week);
-  if (mode === "tasks") renderTasks(ctx, data.tasks, data.members);
-  if (mode === "events") renderEvents(ctx, data.events);
-  if (mode === "grocery") renderGrocery(ctx, data.grocery);
+  if (mode === "duties") renderDuties(ctx, data.duties, data.members, week, scrollStep);
+  if (mode === "tasks") renderTasks(ctx, data.tasks, data.members, scrollStep);
+  if (mode === "events") renderEvents(ctx, data.events, scrollStep);
+  if (mode === "grocery") renderGrocery(ctx, data.grocery, scrollStep);
   return canvas;
 }
 
@@ -1116,19 +1152,24 @@ function Pixoo({ data, save }) {
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
   const [sendLog, setSendLog] = useState([]);
-  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewFrameIndex, setPreviewFrameIndex] = useState(0);
   const previewRef = useRef();
+  const previewPlan = buildPixooFramePlan(data);
+  const activePreviewFrame = previewPlan[previewFrameIndex % Math.max(previewPlan.length, 1)] || { mode: PIXOO_ROTATION_MODES[0], scrollStep: 0 };
 
   useEffect(() => {
-    const t = setInterval(() => setPreviewIndex(i => (i + 1) % PIXOO_ROTATION_MODES.length), 3000);
+    setPreviewFrameIndex(0);
+    const t = setInterval(() => {
+      setPreviewFrameIndex(i => (i + 1) % Math.max(previewPlan.length, 1));
+    }, PIXOO_FRAME_MS);
     return () => clearInterval(t);
-  }, []);
-  useEffect(() => { drawPreview(); }, [previewIndex, data]);
+  }, [data]);
+  useEffect(() => { drawPreview(); }, [previewFrameIndex, data]);
 
   const drawPreview = () => {
     const canvas = previewRef.current;
     if (!canvas) return;
-    const src = renderToCanvas(data, PIXOO_ROTATION_MODES[previewIndex]);
+    const src = renderToCanvas(data, activePreviewFrame.mode, activePreviewFrame.scrollStep);
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     // Scale up 4× inside the canvas itself so text is readable in the UI
@@ -1200,7 +1241,8 @@ function Pixoo({ data, save }) {
     };
 
     // Step 1: build the rotating household animation
-    const frames = PIXOO_ROTATION_MODES.map(frameMode => renderToCanvas(data, frameMode));
+    const animationPlan = buildPixooFramePlan(data);
+    const frames = animationPlan.map(frame => renderToCanvas(data, frame.mode, frame.scrollStep));
     const frameData = frames.map(canvasToPixooBase64);
     const picId = await getNextPicId(log);
     if (picId == null) {
@@ -1215,7 +1257,7 @@ function Pixoo({ data, save }) {
       log.push({ label: `Payload size error on frame ${badFrame + 1}`, ok: false, detail: `got ${frameData[badFrame].length} chars, expected ${expectedLen}` });
       setSendLog([...log]); setSending(false); return;
     }
-    log.push({ label: `Payload verified: ${PIXOO_ROTATION_MODES.length} frames × ${expectedLen} chars`, ok: true, detail: "" });
+    log.push({ label: `Payload verified: ${animationPlan.length} frames × ${expectedLen} chars`, ok: true, detail: "" });
     setSendLog([...log]);
 
     await step("Switch to Custom channel (SelectIndex: 3)", {
@@ -1226,11 +1268,11 @@ function Pixoo({ data, save }) {
     for (let i = 0; i < frameData.length; i++) {
       const ok = await step(`Upload frame ${i + 1}/${frameData.length} (Draw/SendHttpGif)`, {
         Command: "Draw/SendHttpGif",
-        PicNum: PIXOO_ROTATION_MODES.length,
+        PicNum: frameData.length,
         PicWidth: 64,
         PicOffset: i,
         PicID: picId,
-        PicSpeed: 3000,
+        PicSpeed: PIXOO_FRAME_MS,
         PicData: frameData[i],
       });
       if (!ok) {
@@ -1295,15 +1337,15 @@ function Pixoo({ data, save }) {
               { label: "Upcoming Events", icon: "calendar" },
               { label: "Grocery List", icon: "cart" },
             ].map((item, i) => (
-              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9, border: `1px solid ${previewIndex === i ? T.accent : T.border}`, background: previewIndex === i ? `${T.accent}12` : T.surface }}>
-                <SpriteIcon spriteKey={item.icon} color={previewIndex === i ? T.accent : T.muted} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: previewIndex === i ? T.accent : T.text }}>{item.label}</span>
-                <span style={{ marginLeft: "auto", fontSize: 11, color: previewIndex === i ? T.accent : T.muted }}>{previewIndex === i ? "LIVE" : "NEXT"}</span>
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9, border: `1px solid ${activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? T.accent : T.border}`, background: activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? `${T.accent}12` : T.surface }}>
+                <SpriteIcon spriteKey={item.icon} color={activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? T.accent : T.muted} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? T.accent : T.text }}>{item.label}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? T.accent : T.muted }}>{activePreviewFrame.mode === PIXOO_ROTATION_MODES[i] ? "LIVE" : "NEXT"}</span>
               </div>
             ))}
           </div>
           <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.7, marginBottom: 10 }}>
-            The Pixoo animation rotates through all four household boards every 3 seconds.
+            The Pixoo animation shows each board for about 3 seconds, and holds longer when a long title needs time to scroll fully.
           </div>
           <Btn onClick={sendToPixoo} disabled={sending || !ip} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
             {sending ? "Sending..." : "Send to Pixoo64"}
