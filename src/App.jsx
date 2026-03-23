@@ -705,7 +705,14 @@ function Pixoo({ data, save }) {
   const cmd = async (payload) => {
     if (!ip) return false;
     try {
-      const r = await fetch(`http://${ip}/post`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(4000) });
+      // ip is now a full https:// URL from the Cloudflare tunnel
+      const url = ip.startsWith("http") ? `${ip.replace(/\/$/, "")}/post` : `http://${ip}/post`;
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(6000),
+      });
       return r.ok;
     } catch { return false; }
   };
@@ -751,19 +758,38 @@ function Pixoo({ data, save }) {
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
       <SectionTitle sub="Control your Divoom Pixoo64 LED display">PIXOO64</SectionTitle>
 
-      <div style={{ background: `${T.yellow}12`, border: `1px solid ${T.yellow}40`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: T.mutedBright, lineHeight: 1.6 }}>
-        ⚠️ <strong style={{ color: T.yellow }}>Home WiFi only</strong> — The Pixoo64 is a local device. Control works when your phone and the Pixoo are on the same home WiFi network.
+      <div style={{ background: `${T.accent}08`, border: `1px solid ${T.accentDim}44`, borderRadius: 12, padding: "16px 18px", marginBottom: 20, lineHeight: 1.7 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>📡 How to connect</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { n: "1", text: "Install cloudflared on your home computer", sub: "Mac: brew install cloudflared · Windows: winget install --id Cloudflare.cloudflared" },
+            { n: "2", text: "Run the proxy script from the project folder", sub: null },
+            { n: "3", text: "Copy the https://….trycloudflare.com URL it prints", sub: null },
+            { n: "4", text: "Paste it as the Proxy URL below and click Test", sub: null },
+          ].map(s => (
+            <div key={s.n} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${T.accent}22`, border: `1px solid ${T.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.mono, fontSize: 10, color: T.accent, flexShrink: 0, marginTop: 1 }}>{s.n}</div>
+              <div>
+                <div style={{ fontSize: 13, color: T.text }}>{s.text}</div>
+                {s.sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{s.sub}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 12, padding: "10px 14px", background: T.surface, borderRadius: 8, fontFamily: T.mono, fontSize: 12, color: T.green }}>
+          $ node pixoo-proxy.js 192.168.1.42
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
         <Card>
           <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 16 }}>CONNECTION</div>
-          <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>DEVICE IP</label>
+          <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>PROXY URL (from cloudflared)</label>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={ip} onChange={e => setIp(e.target.value)} placeholder="192.168.1.42" style={{ flex: 1 }} />
+            <input value={ip} onChange={e => setIp(e.target.value)} placeholder="https://xxxx.trycloudflare.com" style={{ flex: 1 }} />
             <Btn onClick={test} disabled={!ip}>Test</Btn>
           </div>
-          <p style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>Find in Divoom app → Device → IP address</p>
+          <p style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>Paste the URL printed by <code style={{ fontFamily: T.mono }}>pixoo-proxy.js</code></p>
           {status && <div style={{ padding: "8px 12px", borderRadius: 8, marginBottom: 16, background: status === "ok" ? `${T.green}15` : `${T.red}15`, border: `1px solid ${status === "ok" ? T.green : T.red}44`, fontSize: 13, color: status === "ok" ? T.green : T.red }}>{status === "ok" ? "✓ Connected!" : "✗ Failed — check IP & WiFi"}</div>}
           <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>BRIGHTNESS <span style={{ color: T.accent }}>{brightness}%</span></label>
           <input type="range" min="0" max="100" value={brightness} onChange={e => setBrightness(+e.target.value)} onMouseUp={e => { cmd({ Command: "Channel/SetBrightness", Brightness: +e.target.value }); save({ ...data, pixoo: { ...data.pixoo, brightness: +e.target.value } }); }} style={{ width: "100%", accentColor: T.accent, marginBottom: 14 }} />

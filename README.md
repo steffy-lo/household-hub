@@ -115,13 +115,55 @@ git push -u origin main
 
 ## Pixoo64 Setup
 
-The Pixoo64 only works when your phone is on your **home WiFi network** (it's a local device, not cloud-connected).
+The Pixoo64 is a local network device with no HTTPS support. Because the app is served over HTTPS on Netlify, browsers refuse to call plain `http://` addresses — even on your LAN.
 
-1. In the app, go to the **PIXOO64** tab
-2. Find your Pixoo's IP address in the **Divoom app** → Device → IP
-3. Enter it and tap **Test**
-4. Choose what to display and tap **Send to Pixoo64**
+The solution is a **Cloudflare Tunnel**: a free service that gives your local proxy script a real `https://` URL. The browser calls that URL over HTTPS (allowed), Cloudflare routes it through an encrypted tunnel to your PC, and your PC forwards it to the Pixoo over plain HTTP on your LAN.
 
+```
+Netlify app (HTTPS)
+      ↓  https://xxxx.trycloudflare.com  ✅
+Cloudflare ──── encrypted tunnel ────▶ cloudflared on your PC
+                                               ↓  http://  ✅ (local LAN)
+                                          Pixoo64 (192.168.1.x)
+```
+
+### One-time setup
+
+1. **Install Node.js** if you don't have it: https://nodejs.org (LTS version)
+
+2. **Install cloudflared**:
+   - Mac: `brew install cloudflared`
+   - Windows: `winget install --id Cloudflare.cloudflared`
+   - Linux: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+### Every time you want to control the Pixoo
+
+1. Open a terminal in the project folder and run:
+```bash
+node pixoo-proxy.js 192.168.1.42
+```
+Replace `192.168.1.42` with your Pixoo's actual IP (find it in the Divoom app → Device → IP address).
+
+2. Wait a few seconds — it will print something like:
+```
+╔══════════════════════════════════════════════════════╗
+║  ✅  Tunnel is LIVE — copy this URL into the app     ║
+╠══════════════════════════════════════════════════════╣
+║  https://random-words-here.trycloudflare.com         ║
+╚══════════════════════════════════════════════════════╝
+```
+
+3. Open the Household Hub app → **PIXOO64** tab
+
+4. Paste the `https://….trycloudflare.com` URL into the **Proxy URL** field
+
+5. Click **Test** → you should see "✓ Connected!"
+
+6. Choose a display mode and click **Send to Pixoo64**
+
+7. Press `Ctrl+C` in the terminal when done.
+
+> **Note:** The tunnel URL changes every time you restart the proxy. Just paste the new URL into the app and click Test again. The URL is only active while the script is running.
 ---
 
 ## Updating the app later
@@ -136,6 +178,6 @@ Any time you push new code to GitHub, Netlify automatically rebuilds and deploys
 
 **Supabase not syncing** → Check that you copied the correct URL and anon key into Netlify environment variables (Site settings → Environment variables), then go to Netlify → your site → Deploys → Trigger deploy
 
-**Pixoo64 not responding** → Make sure your phone is on home WiFi (same network as the Pixoo). The Pixoo IP may change — re-check in the Divoom app.
+**Pixoo64 not responding** → Make sure the proxy is running (`node pixoo-proxy.js <ip>`) and that you've entered `localhost:8080` (not the Pixoo IP) in the app. The Pixoo's IP can change after a router restart — re-check it in the Divoom app and restart the proxy with the new IP.
 
 **Data lost** → Use the Export button in Settings to download a backup. Import it to restore.
