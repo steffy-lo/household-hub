@@ -1026,7 +1026,7 @@ function getModeScrollOverflow(data, mode) {
   }
   if (mode === "events") {
     const todayStr = new Date().toISOString().split("T")[0];
-    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 54)));
+    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 56)));
   }
   if (mode === "grocery") {
     return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name, 56)));
@@ -1081,8 +1081,8 @@ function renderEvents(ctx, events, scrollStep = 0) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-    pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 54, scrollStep);
-    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 54);
+    pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 56, scrollStep);
+    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 56);
   });
 }
 
