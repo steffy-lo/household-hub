@@ -324,6 +324,8 @@ function Duties({ data, save }) {
   const [viewWeek, setViewWeek] = useState(getWeekKey());
   const [showAdd, setShowAdd] = useState(false);
   const [newDuty, setNewDuty] = useState({ name: "", emoji: "🧹" });
+  const [editingSpriteDutyId, setEditingSpriteDutyId] = useState(null);
+  const [spriteDraft, setSpriteDraft] = useState(() => spriteRowsToGrid(SPRITES.default));
   const isCurrent = viewWeek === getWeekKey();
   const assign = (dutyId, memberId) => save({ ...data, duties: data.duties.map(d => d.id === dutyId ? { ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: memberId || null } } : d) });
   const autoRotate = () => {
@@ -336,9 +338,28 @@ function Duties({ data, save }) {
   };
   const addDuty = () => {
     if (!newDuty.name.trim()) return;
-    save({ ...data, duties: [...data.duties, { id: uid(), ...newDuty, weeklyRotation: {} }] });
+    save({ ...data, duties: [...data.duties, { id: uid(), ...newDuty, spriteRows: getDefaultSpriteRows(newDuty.name), weeklyRotation: {} }] });
     setNewDuty({ name: "", emoji: "🧹" }); setShowAdd(false);
   };
+  const editingDuty = data.duties.find(d => d.id === editingSpriteDutyId) || null;
+  const openSpriteEditor = (duty) => {
+    setEditingSpriteDutyId(duty.id);
+    setSpriteDraft(spriteRowsToGrid(getDutySpriteRows(duty)));
+  };
+  const toggleDraftPixel = (row, col) => {
+    setSpriteDraft(prev => prev.map((cells, r) => r === row ? cells.map((on, c) => c === col ? !on : on) : cells));
+  };
+  const saveSprite = () => {
+    if (!editingDuty) return;
+    const spriteRows = gridToSpriteRows(spriteDraft);
+    save({ ...data, duties: data.duties.map(d => d.id === editingDuty.id ? { ...d, spriteRows } : d) });
+    setEditingSpriteDutyId(null);
+  };
+  const resetSprite = () => {
+    if (!editingDuty) return;
+    setSpriteDraft(spriteRowsToGrid(getDefaultSpriteRows(editingDuty.name)));
+  };
+  const clearSprite = () => setSpriteDraft(Array.from({ length: 8 }, () => Array(8).fill(false)));
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 18px", marginBottom: 20 }}>
@@ -358,6 +379,7 @@ function Duties({ data, save }) {
         {data.duties.map(duty => {
           const assignedId = duty.weeklyRotation?.[viewWeek];
           const assignee = data.members.find(m => m.id === assignedId);
+          const spriteRows = getDutySpriteRows(duty);
           return (
             <Card key={duty.id} glow={assignee?.color}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -369,6 +391,14 @@ function Duties({ data, save }) {
               </div>
               {assignee ? <div style={{ marginBottom: 12 }}><MemberBadge member={assignee} size="lg" /></div> :
                 <div style={{ padding: "8px 12px", background: `${T.red}10`, border: `1px dashed ${T.red}40`, borderRadius: 8, marginBottom: 12, fontSize: 12, color: T.muted }}>⚠ Unassigned</div>}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, padding: "10px 12px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10 }}>
+                <SpritePreview rows={spriteRows} color={assignee?.color || T.accent} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Pixoo sprite</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>This 8×8 icon appears beside the duty on the Pixoo.</div>
+                </div>
+                <Btn size="sm" variant="ghost" onClick={() => openSpriteEditor(duty)}>Edit Sprite</Btn>
+              </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {data.members.map(m => (
                   <button key={m.id} onClick={() => assign(duty.id, m.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, border: `2px solid ${m.id === assignedId ? m.color : T.border}`, background: m.id === assignedId ? `${m.color}22` : "transparent", color: m.id === assignedId ? m.color : T.mutedBright, fontSize: 12, fontWeight: 600 }}>{m.emoji} {m.name}</button>
@@ -390,8 +420,47 @@ function Duties({ data, save }) {
           </div>
         </Modal>
       )}
+      {editingDuty && (
+        <Modal title={`Edit Sprite · ${editingDuty.name}`} onClose={() => setEditingSpriteDutyId(null)} footer={<><Btn variant="ghost" onClick={() => setEditingSpriteDutyId(null)}>Cancel</Btn><Btn onClick={saveSprite}>Save Sprite</Btn></>}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 20, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 20px)", gap: 4, padding: 10, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10 }}>
+              {spriteDraft.flatMap((cells, row) => cells.map((on, col) => (
+                <button
+                  key={`${row}-${col}`}
+                  onClick={() => toggleDraftPixel(row, col)}
+                  style={{ width: 20, height: 20, borderRadius: 4, border: `1px solid ${on ? T.accent : T.border}`, background: on ? T.accent : "#0a0f17" }}
+                />
+              )))}
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <SpritePreview rows={gridToSpriteRows(spriteDraft)} color={T.accent} scale={8} />
+                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+                  Draw the 8×8 icon that should appear beside this duty on the Pixoo dashboard.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Btn size="sm" variant="ghost" onClick={resetSprite}>Reset To Suggested</Btn>
+                <Btn size="sm" variant="ghost" onClick={clearSprite}>Clear</Btn>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
+}
+
+function SpritePreview({ rows, color = T.accent, scale = 3 }) {
+  const ref = useRef();
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 8, 8);
+    drawSpriteRows(ctx, rows, 0, 0, color);
+  }, [rows, color]);
+  return <canvas ref={ref} width={8} height={8} style={{ width: 8 * scale, height: 8 * scale, imageRendering: "pixelated", background: "#000", border: `1px solid ${T.border}`, borderRadius: 6, flexShrink: 0 }} />;
 }
 
 // ─── TASKS ────────────────────────────────────────────────────────────────────
@@ -679,12 +748,39 @@ function getSpriteKey(name = "") {
   return "default";
 }
 
+function sanitizeSpriteRows(rows) {
+  if (!Array.isArray(rows) || rows.length !== 8) return null;
+  const clean = rows.map(v => Number(v) & 0xff);
+  return clean.every(v => Number.isFinite(v)) ? clean : null;
+}
+
+function getDefaultSpriteRows(name = "") {
+  return [...(SPRITES[getSpriteKey(name)] || SPRITES.default)];
+}
+
+function getDutySpriteRows(duty) {
+  return sanitizeSpriteRows(duty?.spriteRows) || getDefaultSpriteRows(duty?.name);
+}
+
+function spriteRowsToGrid(rows) {
+  const safe = sanitizeSpriteRows(rows) || SPRITES.default;
+  return safe.map(row => Array.from({ length: 8 }, (_, c) => Boolean(row & (1 << (7 - c)))));
+}
+
+function gridToSpriteRows(grid) {
+  return grid.map(row => row.reduce((acc, on, c) => acc | (on ? (1 << (7 - c)) : 0), 0));
+}
+
 function drawSprite(ctx, key, x, y, color) {
-  const rows = SPRITES[key] || SPRITES.default;
+  drawSpriteRows(ctx, SPRITES[key] || SPRITES.default, x, y, color);
+}
+
+function drawSpriteRows(ctx, rows, x, y, color) {
+  const safeRows = sanitizeSpriteRows(rows) || SPRITES.default;
   ctx.fillStyle = color;
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      if (rows[r] & (1 << (7 - c))) ctx.fillRect(x + c, y + r, 1, 1);
+      if (safeRows[r] & (1 << (7 - c))) ctx.fillRect(x + c, y + r, 1, 1);
     }
   }
 }
@@ -701,7 +797,7 @@ function renderDuties(ctx, duties, members, week) {
     // Row separator
     if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
     // Sprite — 8×8, vertically centred in top half of row
-    drawSprite(ctx, getSpriteKey(duty.name), 0, y + 1, color);
+    drawSpriteRows(ctx, getDutySpriteRows(duty), 0, y + 1, color);
     // Duty name — scale 1 (5px tall), fits ~9 chars in 54px
     const dutyLabel = duty.name.toUpperCase().slice(0, 9);
     pxText(ctx, dutyLabel, 10, y + 1, color, 1, 54);
@@ -882,6 +978,36 @@ function Pixoo({ data, save }) {
     if (res.ok) save({ ...data, pixoo: { ...data.pixoo, ip } });
   };
 
+  const getNextPicId = async (log) => {
+    const current = await cmd({ Command: "Draw/GetHttpGifId" });
+    if (!current.ok) {
+      log.push({ label: "Load Pixoo frame ID", ok: false, detail: current.error || current.rawText || "Request failed" });
+      setSendLog([...log]);
+      return null;
+    }
+    const rawId = Number(current.body?.PicId ?? current.body?.PicID ?? 0);
+    if (!Number.isFinite(rawId)) {
+      log.push({ label: "Load Pixoo frame ID", ok: false, detail: `Unexpected response: ${current.rawText || JSON.stringify(current.body)}` });
+      setSendLog([...log]);
+      return null;
+    }
+    if (rawId >= 31) {
+      const reset = await cmd({ Command: "Draw/ResetHttpGifId" });
+      if (!reset.ok) {
+        log.push({ label: "Reset Pixoo frame ID", ok: false, detail: reset.error || reset.rawText || "Request failed" });
+        setSendLog([...log]);
+        return null;
+      }
+      log.push({ label: "Reset Pixoo frame ID", ok: true, detail: `counter=${rawId} -> 1` });
+      setSendLog([...log]);
+      return 1;
+    }
+    const nextId = rawId + 1;
+    log.push({ label: "Load Pixoo frame ID", ok: true, detail: `counter=${rawId} -> sending ${nextId}` });
+    setSendLog([...log]);
+    return nextId;
+  };
+
   const sendToPixoo = async () => {
     setSending(true);
     setSendLog([]);
@@ -899,7 +1025,11 @@ function Pixoo({ data, save }) {
     // Step 1: send the pixel frame
     const canvas = renderToCanvas(data, mode, customText, time);
     const base64rgb = canvasToPixooBase64(canvas);
-    const picId = Date.now() % 100000;
+    const picId = await getNextPicId(log);
+    if (picId == null) {
+      setSending(false);
+      return;
+    }
 
     // Verify payload: 64×64×3 = 12288 bytes → 16384 base64 chars
     const expectedLen = PW * PH * 3 * 4 / 3; // = 16384
