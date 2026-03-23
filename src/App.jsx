@@ -57,7 +57,7 @@ function DEFAULT_DATA() {
       { id: "d5", name: "Bathroom", weeklyRotation: { [week]: "m1" } },
     ],
     tasks: [], events: [], grocery: [],
-    pixoo: { ip: "", brightness: 70, displayMode: "duties" },
+    pixoo: { ip: "", brightness: 70 },
   };
 }
 
@@ -668,98 +668,6 @@ function Grocery({ data, save }) {
 // ─── PIXEL RENDERING ENGINE ───────────────────────────────────────────────────
 const PW = 64, PH = 64;
 
-// 5×7 pixel font — each char is 5 columns of 7-bit column masks (bottom = LSB)
-const FONT5X7 = {
-  " ": [0, 0, 0, 0, 0], "!": [0, 0, 95, 0, 0], '"': [7, 0, 7, 0, 0], "#": [20, 127, 20, 127, 20],
-  "$": [36, 42, 127, 42, 18], "%": [35, 19, 8, 100, 98], "&": [54, 73, 85, 34, 80], "'": [0, 5, 3, 0, 0],
-  "(": [0, 28, 34, 65, 0], ")": [0, 65, 34, 28, 0], "*": [20, 8, 62, 8, 20], "+": [8, 8, 62, 8, 8],
-  ",": [0, 80, 48, 0, 0], "-": [8, 8, 8, 8, 8], ".": [0, 96, 96, 0, 0], "/": [32, 16, 8, 4, 2],
-  "0": [62, 81, 73, 69, 62], "1": [0, 66, 127, 64, 0], "2": [66, 97, 81, 73, 70], "3": [33, 65, 69, 75, 49],
-  "4": [24, 20, 18, 127, 16], "5": [39, 69, 69, 69, 57], "6": [60, 74, 73, 73, 48], "7": [1, 113, 9, 5, 3],
-  "8": [54, 73, 73, 73, 54], "9": [6, 73, 73, 41, 30], ":": [0, 54, 54, 0, 0], ";": [0, 86, 54, 0, 0],
-  "<": [8, 20, 34, 65, 0], "=": [20, 20, 20, 20, 20], ">": [0, 65, 34, 20, 8], "?": [2, 1, 81, 9, 6],
-  "A": [126, 9, 9, 9, 126], "B": [127, 73, 73, 73, 54], "C": [62, 65, 65, 65, 34], "D": [127, 65, 65, 34, 28],
-  "E": [127, 73, 73, 73, 65], "F": [127, 9, 9, 9, 1], "G": [62, 65, 65, 81, 115], "H": [127, 8, 8, 8, 127],
-  "I": [0, 65, 127, 65, 0], "J": [32, 64, 65, 63, 1], "K": [127, 8, 20, 34, 65], "L": [127, 64, 64, 64, 64],
-  "M": [127, 2, 12, 2, 127], "N": [127, 4, 8, 16, 127], "O": [62, 65, 65, 65, 62], "P": [127, 9, 9, 9, 6],
-  "Q": [62, 65, 81, 33, 94], "R": [127, 9, 25, 41, 70], "S": [38, 73, 73, 73, 50], "T": [1, 1, 127, 1, 1],
-  "U": [63, 64, 64, 64, 63], "V": [31, 32, 64, 32, 31], "W": [127, 32, 24, 32, 127], "X": [99, 20, 8, 20, 99],
-  "Y": [3, 4, 120, 4, 3], "Z": [97, 81, 73, 69, 67],
-  "a": [32, 84, 84, 84, 120], "b": [127, 72, 72, 72, 48], "c": [56, 68, 68, 68, 32], "d": [48, 72, 72, 72, 127],
-  "e": [56, 84, 84, 84, 24], "f": [8, 126, 9, 1, 2], "g": [8, 84, 84, 84, 60], "h": [127, 8, 8, 8, 112],
-  "i": [0, 72, 122, 64, 0], "j": [32, 64, 72, 58, 0], "k": [127, 16, 40, 68, 0], "l": [0, 65, 127, 64, 0],
-  "m": [124, 4, 24, 4, 120], "n": [124, 8, 4, 4, 120], "o": [56, 68, 68, 68, 56], "p": [124, 20, 20, 20, 8],
-  "q": [8, 20, 20, 20, 124], "r": [124, 8, 4, 4, 8], "s": [72, 84, 84, 84, 36], "t": [4, 63, 68, 64, 32],
-  "u": [60, 64, 64, 32, 124], "v": [28, 32, 64, 32, 28], "w": [60, 64, 56, 64, 60], "x": [68, 40, 16, 40, 68],
-  "y": [12, 80, 80, 80, 60], "z": [68, 100, 84, 76, 68],
-};
-
-function charWidth(scale = 1) { return (5 + 1) * scale; }
-function textWidth(str, scale = 1) { return str.length * charWidth(scale); }
-function getGlyphCols(ch) {
-  const cols = FONT5X7[ch] || FONT5X7["?"] || [0, 0, 0, 0, 0];
-  let first = 0, last = cols.length - 1;
-  while (first < cols.length && cols[first] === 0) first++;
-  while (last >= first && cols[last] === 0) last--;
-  if (first > last) return [0];
-  return cols.slice(first, last + 1);
-}
-function tightTextWidth(str, spacing = 0) {
-  const s = String(str).toUpperCase();
-  let width = 0;
-  for (let i = 0; i < s.length; i++) {
-    width += getGlyphCols(s[i]).length;
-    if (i < s.length - 1) width += spacing;
-  }
-  return width;
-}
-function fitTightText(str, maxW, spacing = 0) {
-  const s = String(str).toUpperCase();
-  if (tightTextWidth(s, spacing) <= maxW) return s;
-  let out = "";
-  for (const ch of s) {
-    const next = out + ch;
-    if (tightTextWidth(next, spacing) > maxW) break;
-    out = next;
-  }
-  return out;
-}
-
-function pxText(ctx, str, x, y, color, scale = 1, maxW = PW) {
-  ctx.fillStyle = color;
-  const s = String(str).toUpperCase();
-  let cx = x;
-  for (const ch of s) {
-    if (cx - x >= maxW) break;
-    const cols = FONT5X7[ch] || FONT5X7["?"] || [0, 0, 0, 0, 0];
-    for (let col = 0; col < 5; col++) {
-      const mask = cols[col];
-      for (let row = 0; row < 7; row++) {
-        if (mask & (1 << row)) {
-          ctx.fillRect(cx + col * scale, y + row * scale, scale, scale);
-        }
-      }
-    }
-    cx += charWidth(scale);
-  }
-}
-function pxTightText(ctx, str, x, y, color, maxW = PW, spacing = 0) {
-  ctx.fillStyle = color;
-  const s = fitTightText(str, maxW, spacing);
-  let cx = x;
-  for (let i = 0; i < s.length; i++) {
-    const cols = getGlyphCols(s[i]);
-    for (let col = 0; col < cols.length; col++) {
-      const mask = cols[col];
-      for (let row = 0; row < 7; row++) {
-        if (mask & (1 << row)) ctx.fillRect(cx + col, y + row, 1, 1);
-      }
-    }
-    cx += cols.length;
-    if (i < s.length - 1) cx += spacing;
-    if (cx - x >= maxW) break;
-  }
-}
 const MINI_FONT = {
   "A": ["0110", "1001", "1111", "1001", "1001"],
   "B": ["1110", "1001", "1110", "1001", "1110"],
@@ -859,7 +767,6 @@ const SPRITES = {
   calendar: [0x24, 0x7E, 0x42, 0x7E, 0x42, 0x5A, 0x7E, 0x00],
   cart: [0x08, 0x1C, 0x14, 0x3E, 0x7F, 0x3E, 0x14, 0x00],
   check: [0x00, 0x01, 0x02, 0x24, 0x58, 0x30, 0x20, 0x00],
-  clock: [0x00, 0x3C, 0x42, 0x99, 0x85, 0x42, 0x3C, 0x00],
   house: [0x08, 0x1C, 0x3E, 0x7F, 0x49, 0x49, 0x7F, 0x00],
   default: [0x00, 0x18, 0x3C, 0x66, 0x42, 0x66, 0x3C, 0x18],
 };
@@ -874,7 +781,6 @@ function getSpriteKey(name = "") {
   if (/event|calendar|schedul|appoint/.test(n)) return "calendar";
   if (/grocery|shop|store|buy|cart/.test(n)) return "cart";
   if (/task|todo|check|done/.test(n)) return "check";
-  if (/clock|time|alarm/.test(n)) return "clock";
   if (/home|house/.test(n)) return "house";
   return "default";
 }
@@ -925,14 +831,12 @@ function drawPixelPattern(ctx, pattern, x, y, color) {
   }
 }
 
-function drawMiniHeart(ctx, x, y, color) {
-  drawPixelPattern(ctx, ["01010", "11111", "11111", "01110", "00100"], x, y, color);
+function drawMiniSparkle(ctx, x, y, color) {
+  drawPixelPattern(ctx, ["010", "111", "010"], x, y, color);
 }
 
-function drawMiniSakura(ctx, x, y, color, center = "#fff4f8") {
-  drawPixelPattern(ctx, ["01010", "11111", "01110", "11111", "01010"], x, y, color);
-  ctx.fillStyle = center;
-  ctx.fillRect(x + 2, y + 2, 1, 1);
+function drawMiniBlock(ctx, x, y, color) {
+  drawPixelPattern(ctx, ["11", "11"], x, y, color);
 }
 
 function drawSoftCard(ctx, x, y, w, h, fill, border = "#2b3551") {
@@ -952,8 +856,8 @@ function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
   const hasIcon = Boolean(iconKey);
   if (hasIcon) drawSprite(ctx, iconKey, 2, 1, color);
   pxMiniText(ctx, label, hasIcon ? 12 : 4, 3, color, hasIcon ? 42 : 50);
-  drawMiniHeart(ctx, 52, 2, accent);
-  drawMiniHeart(ctx, 58, 2, "#ffffff");
+  drawMiniSparkle(ctx, 53, 4, accent);
+  drawMiniBlock(ctx, 59, 4, "#ffffff");
 }
 
 function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#171d32", border = "#2d3756") {
@@ -969,21 +873,19 @@ function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#
 // ── Mode-specific renderers ───────────────────────────────────────────────────
 function renderDuties(ctx, duties, members, week) {
   const COLORS = ["#ff68b3", "#7bd7ff", "#ffd76d", "#88f0b7"];
-  const fills = ["#2b1730", "#17233c", "#2f2518", "#182a24"];
   const rows = duties.slice(0, 4);
-  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", "house", "#ffd1eb");
+  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", null, "#ffd1eb");
   const rowH = 12;
   rows.forEach((duty, i) => {
     const y = 12 + i * rowH;
     const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
     const color = member?.color || COLORS[i % 4];
-    drawSoftCard(ctx, 1, y, 62, 11, fills[i % fills.length], "#2c3553");
+    drawSoftCard(ctx, 1, y, 62, 11, "#171d32", "#2d3756");
     drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
     const dutyLabel = fitMiniText(duty.name, 44).toUpperCase();
     pxMiniText(ctx, dutyLabel, 14, y + 2, color, 44);
     const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 32).toUpperCase();
     pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 32);
-    drawMiniSakura(ctx, 56, y + 3, member ? "#ffd1eb" : "#556079", member ? "#fff8fc" : "#7d88a7");
   });
 }
 
@@ -994,10 +896,10 @@ function renderEvents(ctx, events) {
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
-    drawMiniSakura(ctx, 17, 23, "#ff8cc2");
-    drawMiniSakura(ctx, 42, 29, "#ffd56f");
+    drawMiniSparkle(ctx, 18, 24, "#ff8cc2");
+    drawMiniBlock(ctx, 43, 30, "#ffd56f");
     pxMiniText(ctx, "NO PLANS", 18, 39, "#d8def0", 24);
-    pxMiniText(ctx, "YASASHII", 18, 47, "#7382a8", 24);
+    pxMiniText(ctx, "ALL CLEAR", 14, 47, "#7382a8", 32);
     return;
   }
   const rowH = 15;
@@ -1007,10 +909,10 @@ function renderEvents(ctx, events) {
     const color = isToday ? "#ff8bc7" : ["#9cb5ff", "#ffd56f", "#7be4d3"][i % 3];
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
-    const dateStr = `${d.toLocaleDateString("en", { month: "short" }).toUpperCase()} ${d.getDate()}`;
-    pxMiniText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 18);
-    pxMiniText(ctx, fitMiniText(ev.title, 48), 5, y + 7, color, 48);
-    if (isToday) drawMiniHeart(ctx, 54, y + 4, "#ffd1eb");
+    const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
+    pxMiniText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 32);
+    pxMiniText(ctx, fitMiniText(ev.title, 52), 5, y + 7, color, 52);
+    if (isToday) drawMiniSparkle(ctx, 55, y + 5, "#ffd1eb");
   });
 }
 
@@ -1020,8 +922,8 @@ function renderGrocery(ctx, grocery) {
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
-    drawMiniHeart(ctx, 16, 24, "#ff9dcc");
-    drawMiniHeart(ctx, 43, 28, "#7be4d3");
+    drawMiniSparkle(ctx, 17, 25, "#ff9dcc");
+    drawMiniBlock(ctx, 44, 29, "#7be4d3");
     pxMiniText(ctx, "ALL SET!", 19, 40, "#d9f7e7", 24);
     return;
   }
@@ -1039,8 +941,8 @@ function renderTasks(ctx, tasks, members) {
   if (pending.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
-    drawMiniHeart(ctx, 15, 25, "#ffd56f");
-    drawMiniHeart(ctx, 43, 27, "#ff9dcc");
+    drawMiniSparkle(ctx, 16, 26, "#ffd56f");
+    drawMiniBlock(ctx, 44, 28, "#ff9dcc");
     pxMiniText(ctx, "DONE!", 24, 40, "#d8ffe2", 16);
     return;
   }
@@ -1053,7 +955,7 @@ function renderTasks(ctx, tasks, members) {
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
 
-function renderToCanvas(data, mode, time) {
+function renderToCanvas(data, mode) {
   const canvas = document.createElement("canvas");
   canvas.width = PW; canvas.height = PH;
   const ctx = canvas.getContext("2d");
@@ -1099,21 +1001,19 @@ function Pixoo({ data, save }) {
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
   const [sendLog, setSendLog] = useState([]);
-  const [time, setTime] = useState(new Date());
   const [previewIndex, setPreviewIndex] = useState(0);
   const previewRef = useRef();
 
-  useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => {
     const t = setInterval(() => setPreviewIndex(i => (i + 1) % PIXOO_ROTATION_MODES.length), 3000);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => { drawPreview(); }, [previewIndex, data, time]);
+  useEffect(() => { drawPreview(); }, [previewIndex, data]);
 
   const drawPreview = () => {
     const canvas = previewRef.current;
     if (!canvas) return;
-    const src = renderToCanvas(data, PIXOO_ROTATION_MODES[previewIndex], time);
+    const src = renderToCanvas(data, PIXOO_ROTATION_MODES[previewIndex]);
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     // Scale up 4× inside the canvas itself so text is readable in the UI
@@ -1185,7 +1085,7 @@ function Pixoo({ data, save }) {
     };
 
     // Step 1: build the rotating household animation
-    const frames = PIXOO_ROTATION_MODES.map(frameMode => renderToCanvas(data, frameMode, time));
+    const frames = PIXOO_ROTATION_MODES.map(frameMode => renderToCanvas(data, frameMode));
     const frameData = frames.map(canvasToPixooBase64);
     const picId = await getNextPicId(log);
     if (picId == null) {
@@ -1316,7 +1216,7 @@ function Pixoo({ data, save }) {
           </div>
           <div style={{ fontSize: 12, color: T.muted, maxWidth: 280, lineHeight: 1.7, marginTop: 8 }}>
             <p>This is a pixel-accurate preview rendered with the same engine as the Pixoo64.</p>
-            <p style={{ marginTop: 8 }}>The display is 64×64 pixels. Text uses a built-in 5×7 pixel font. Sprites are 8×8 bitmaps matched from duty/item names.</p>
+            <p style={{ marginTop: 8 }}>The display is 64×64 pixels. Text uses the compact custom pixel font from this renderer, and sprites are 8×8 bitmaps drawn from duty defaults or your saved custom icons.</p>
           </div>
         </div>
       </Card>
