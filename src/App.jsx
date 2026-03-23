@@ -41,9 +41,10 @@ function shiftWeek(wk, delta) {
   return getWeekKey(ws);
 }
 function uid() { return Math.random().toString(36).slice(2, 9); }
-const PIXOO_SCROLL_CHAR_LIMIT = 13;
 const PIXOO_FRAME_MS = 400;
 const PIXOO_STATIC_FRAME_COUNT = Math.ceil(3000 / PIXOO_FRAME_MS);
+const PIXOO_SCROLL_PX_PER_FRAME = 2;
+const PIXOO_SCROLL_RIGHT_BUFFER = 4;
 
 function DEFAULT_DATA() {
   const week = getWeekKey();
@@ -889,6 +890,27 @@ function pxDetailText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
   }
 }
 
+function pxDetailTextScrolled(ctx, str, x, y, color, maxW = PW, scrollPx = 0, spacing = 1) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, maxW, 5);
+  ctx.clip();
+  ctx.fillStyle = color;
+  const s = String(str);
+  let cx = x - scrollPx;
+  for (let i = 0; i < s.length; i++) {
+    const pattern = getDetailGlyphPattern(s[i]);
+    for (let row = 0; row < pattern.length; row++) {
+      for (let col = 0; col < pattern[row].length; col++) {
+        if (pattern[row][col] === "1") ctx.fillRect(cx + col, y + row, 1, 1);
+      }
+    }
+    cx += pattern[0].length;
+    if (i < s.length - 1) cx += spacing;
+  }
+  ctx.restore();
+}
+
 // 8×8 sprites — each entry is 8 bytes (one per row, MSB = leftmost pixel)
 const SPRITES = {
   laundry: [0x00, 0x24, 0x7E, 0x42, 0x5A, 0x5A, 0x7E, 0x3C],
@@ -964,7 +986,7 @@ function drawSoftCard(ctx, x, y, w, h, fill, border = "#2b3551") {
   ctx.fillRect(x + w - 1, y, 1, h);
 }
 
-function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
+function drawKawaiiHeader(ctx, label, color, iconKey) {
   drawSoftCard(ctx, 0, 0, PW, 11, "#141a30", "#26304a");
   ctx.fillStyle = color;
   ctx.fillRect(0, 10, PW, 1);
@@ -990,42 +1012,35 @@ function formatCompactDate(dateStr) {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
 }
 
-function getScrollOverflow(text, limit = PIXOO_SCROLL_CHAR_LIMIT) {
-  return Math.max(0, String(text || "").length - limit);
+function getScrollOverflow(text, maxW) {
+  return Math.max(0, detailTextWidth(String(text || "")) - Math.max(0, maxW + PIXOO_SCROLL_RIGHT_BUFFER));
 }
 
-function getScrollingText(text, scrollStep, limit = PIXOO_SCROLL_CHAR_LIMIT) {
-  const value = String(text || "");
-  if (value.length <= limit) return value;
-  const offset = Math.min(scrollStep, value.length - limit);
-  return value.slice(offset, offset + limit);
-}
-
-function getModeScrollOverflow(data, mode, week = getWeekKey()) {
+function getModeScrollOverflow(data, mode) {
   if (mode === "duties") {
-    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name)));
+    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name, 48)));
   }
   if (mode === "tasks") {
-    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title)));
+    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title, 60)));
   }
   if (mode === "events") {
     const todayStr = new Date().toISOString().split("T")[0];
-    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title)));
+    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 60)));
   }
   if (mode === "grocery") {
-    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name)));
+    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name, 60)));
   }
   return 0;
 }
 
 function buildPixooFramePlan(data) {
-  const week = getWeekKey();
   return PIXOO_ROTATION_MODES.flatMap(mode => {
-    const overflow = getModeScrollOverflow(data, mode, week);
-    const frameCount = overflow > 0 ? PIXOO_STATIC_FRAME_COUNT + overflow : PIXOO_STATIC_FRAME_COUNT;
+    const overflow = getModeScrollOverflow(data, mode);
+    const scrollFrames = overflow > 0 ? Math.ceil(overflow / PIXOO_SCROLL_PX_PER_FRAME) + 1 : 0;
+    const frameCount = overflow > 0 ? PIXOO_STATIC_FRAME_COUNT + scrollFrames : PIXOO_STATIC_FRAME_COUNT;
     return Array.from({ length: frameCount }, (_, index) => ({
       mode,
-      scrollStep: overflow > 0 ? Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) : 0,
+      scrollStep: overflow > 0 ? Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) * PIXOO_SCROLL_PX_PER_FRAME : 0,
     }));
   });
 }
@@ -1034,22 +1049,22 @@ function buildPixooFramePlan(data) {
 function renderDuties(ctx, duties, members, week, scrollStep = 0) {
   const COLORS = ["#ff68b3", "#7bd7ff", "#ffd76d", "#88f0b7"];
   const rows = duties.slice(0, 4);
-  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", null, "#ffd1eb");
+  drawKawaiiHeader(ctx, "CHORES", "#ff87c2", null);
   const rowH = 15;
   rows.forEach((duty, i) => {
     const y = 13 + i * rowH;
     const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
     const color = member?.color || COLORS[i % 4];
-    const dutyLabel = fitDetailText(getScrollingText(duty.name, scrollStep, 14), 48);
     const memberLabel = fitDetailText(member ? member.name : "Unassigned", 58);
-    drawInfoRow(ctx, 2, y, 60, 13, dutyLabel, memberLabel, color, getDutySpriteRows(duty), "#171d32", "#2d3756");
+    drawInfoRow(ctx, 2, y, 60, 13, "", memberLabel, color, getDutySpriteRows(duty), "#171d32", "#2d3756");
+    pxDetailTextScrolled(ctx, duty.name, 16, y + 2, color, 46, scrollStep);
   });
 }
 
 function renderEvents(ctx, events, scrollStep = 0) {
   const todayStr = new Date().toISOString().split("T")[0];
   const upcoming = [...events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
-  drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", null, "#ffd4ef");
+  drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", null);
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
@@ -1065,14 +1080,14 @@ function renderEvents(ctx, events, scrollStep = 0) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-    pxDetailText(ctx, fitDetailText(getScrollingText(ev.title, scrollStep, 14), 60), 5, y + 7, color, 60);
+    pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 60, scrollStep);
     pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 60);
   });
 }
 
 function renderGrocery(ctx, grocery, scrollStep = 0) {
   const items = grocery.filter(g => !g.checked);
-  drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", null, "#ffd7ec");
+  drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", null);
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
@@ -1082,16 +1097,17 @@ function renderGrocery(ctx, grocery, scrollStep = 0) {
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
   items.slice(0, 3).forEach((item, i) => {
     const y = 13 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(getScrollingText(item.name, scrollStep, 15), 60), item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
+    drawInfoRow(ctx, 2, y, 60, 13, "", item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
+    pxDetailTextScrolled(ctx, item.name, 6, y + 2, COLORS[i % COLORS.length], 56, scrollStep);
   });
   if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 60, "#7f8baa", 20);
 }
 
 function renderTasks(ctx, tasks, members, scrollStep = 0) {
   const pending = tasks.filter(t => !t.completed);
-  drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", null, "#d6ffe3");
+  drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", null);
   if (pending.length === 0) {
-    drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
+    drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
     pxMiniText(ctx, "DONE!", 23, 33, "#d8ffe2", 58);
     return;
@@ -1101,7 +1117,8 @@ function renderTasks(ctx, tasks, members, scrollStep = 0) {
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
     const detail = task.dueDate ? formatCompactDate(task.dueDate) : assignee?.name || "";
-    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(getScrollingText(task.title, scrollStep, 14), 60), detail, color, null, "#15252a", "#2c4a50");
+    drawInfoRow(ctx, 2, y, 60, 13, "", detail, color, null, "#15252a", "#2c4a50");
+    pxDetailTextScrolled(ctx, task.title, 6, y + 2, color, 56, scrollStep);
   });
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
