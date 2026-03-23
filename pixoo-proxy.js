@@ -33,7 +33,7 @@ const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
-  if (req.method !== "POST") { res.writeHead(405); res.end("Method not allowed"); return; }
+  if (req.method !== "POST")    { res.writeHead(405); res.end("Method not allowed"); return; }
 
   let body = "";
   req.on("data", chunk => (body += chunk));

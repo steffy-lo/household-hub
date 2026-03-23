@@ -3,26 +3,16 @@ import { supabase } from "./supabase.js";
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const T = {
-  bg: "#06080f",
-  surface: "#0c1018",
-  card: "#111827",
-  border: "#1e2d42",
-  borderBright: "#2a3f5f",
-  accent: "#22d3ee",
-  accentDim: "#0e7490",
-  orange: "#f97316",
-  green: "#22c55e",
-  purple: "#a855f7",
-  yellow: "#facc15",
-  red: "#ef4444",
-  text: "#e2e8f0",
-  muted: "#64748b",
-  mutedBright: "#94a3b8",
+  bg: "#06080f", surface: "#0c1018", card: "#111827",
+  border: "#1e2d42", borderBright: "#2a3f5f",
+  accent: "#22d3ee", accentDim: "#0e7490",
+  orange: "#f97316", green: "#22c55e", purple: "#a855f7",
+  yellow: "#facc15", red: "#ef4444",
+  text: "#e2e8f0", muted: "#64748b", mutedBright: "#94a3b8",
   pixel: "'Press Start 2P', monospace",
   mono: "'IBM Plex Mono', monospace",
   sans: "'DM Sans', sans-serif",
 };
-
 const DB_KEY = "main";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -33,18 +23,15 @@ function getWeekKey(date = new Date()) {
   const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
-
 function getWeekLabel(wk = getWeekKey()) {
   const [year, w] = wk.split("-W");
   const jan4 = new Date(Date.UTC(+year, 0, 4));
   const ws = new Date(jan4);
   ws.setUTCDate(jan4.getUTCDate() - (jan4.getUTCDay() || 7) + 1 + (+w - 1) * 7);
-  const we = new Date(ws);
-  we.setUTCDate(ws.getUTCDate() + 6);
+  const we = new Date(ws); we.setUTCDate(ws.getUTCDate() + 6);
   const fmt = d => d.toLocaleDateString("en", { month: "short", day: "numeric" });
   return `${fmt(ws)} – ${fmt(we)}`;
 }
-
 function shiftWeek(wk, delta) {
   const [year, w] = wk.split("-W");
   const jan4 = new Date(Date.UTC(+year, 0, 4));
@@ -53,7 +40,6 @@ function shiftWeek(wk, delta) {
   ws.setUTCDate(ws.getUTCDate() + delta * 7);
   return getWeekKey(ws);
 }
-
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
 function DEFAULT_DATA() {
@@ -70,9 +56,7 @@ function DEFAULT_DATA() {
       { id: "d4", name: "Trash", emoji: "🗑️", weeklyRotation: { [week]: "m2" } },
       { id: "d5", name: "Bathroom", emoji: "🚿", weeklyRotation: { [week]: "m1" } },
     ],
-    tasks: [],
-    events: [],
-    grocery: [],
+    tasks: [], events: [], grocery: [],
     pixoo: { ip: "", brightness: 70, displayMode: "duties" },
   };
 }
@@ -80,25 +64,15 @@ function DEFAULT_DATA() {
 // ─── DATA LAYER ───────────────────────────────────────────────────────────────
 async function dbLoad() {
   if (supabase) {
-    const { data, error } = await supabase
-      .from("household_data")
-      .select("data")
-      .eq("id", DB_KEY)
-      .single();
+    const { data, error } = await supabase.from("household_data").select("data").eq("id", DB_KEY).single();
     if (!error && data) return data.data;
   }
-  // fallback to localStorage
   const raw = localStorage.getItem("hh_hub_v1");
   return raw ? JSON.parse(raw) : null;
 }
-
 async function dbSave(payload) {
   localStorage.setItem("hh_hub_v1", JSON.stringify(payload));
-  if (supabase) {
-    await supabase
-      .from("household_data")
-      .upsert({ id: DB_KEY, data: payload, updated_at: new Date().toISOString() });
-  }
+  if (supabase) await supabase.from("household_data").upsert({ id: DB_KEY, data: payload, updated_at: new Date().toISOString() });
 }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
@@ -119,16 +93,12 @@ function injectGlobals() {
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
       @keyframes slideIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-      @keyframes spin{to{transform:rotate(360deg)}}
       .slide-in{animation:slideIn .25s ease}
       .checkbox{width:18px;height:18px;border:2px solid ${T.border};border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;background:transparent}
       .checkbox.checked{background:${T.accent};border-color:${T.accent}}
       .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease}
       .modal{background:${T.card};border:1px solid ${T.border};border-radius:16px;padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:slideIn .2s ease}
-      @media(max-width:640px){
-        .modal{padding:16px}
-        .hide-mobile{display:none!important}
-      }
+      @media(max-width:640px){.modal{padding:16px}.hide-mobile{display:none!important}}
     </style>
   `);
 }
@@ -145,7 +115,6 @@ function Btn({ children, onClick, variant = "primary", size = "md", style: sx = 
   };
   return <button onClick={disabled ? undefined : onClick} style={{ ...base, ...sizes[size], ...variants[variant], ...sx }}>{children}</button>;
 }
-
 function Card({ children, style: sx = {}, onClick, glow }) {
   const [hov, setHov] = useState(false);
   return (
@@ -155,7 +124,6 @@ function Card({ children, style: sx = {}, onClick, glow }) {
     </div>
   );
 }
-
 function SectionTitle({ children, sub, action }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
@@ -167,7 +135,6 @@ function SectionTitle({ children, sub, action }) {
     </div>
   );
 }
-
 function MemberBadge({ member, size = "sm" }) {
   if (!member) return null;
   const dim = size === "sm" ? 22 : 30;
@@ -178,7 +145,6 @@ function MemberBadge({ member, size = "sm" }) {
     </div>
   );
 }
-
 function EmptyState({ icon, text, action }) {
   return (
     <div style={{ textAlign: "center", padding: "40px 24px" }}>
@@ -188,7 +154,6 @@ function EmptyState({ icon, text, action }) {
     </div>
   );
 }
-
 function Modal({ onClose, title, children, footer }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -214,47 +179,31 @@ const TABS = [
   { id: "pixoo", label: "PIXOO64", icon: "📺" },
   { id: "settings", label: "SETUP", icon: "⚙" },
 ];
-
-function Header({ activeTab, setActiveTab, syncStatus, pixooConnected }) {
+function Header({ activeTab, setActiveTab, syncStatus }) {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
   return (
     <header style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, position: "sticky", top: 0, zIndex: 100 }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 16px", display: "flex", alignItems: "center", gap: 16, height: 56 }}>
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div style={{ width: 32, height: 32, background: `${T.accent}22`, border: `1px solid ${T.accentDim}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 16 }}>🏠</span>
-          </div>
+          <div style={{ width: 32, height: 32, background: `${T.accent}22`, border: `1px solid ${T.accentDim}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 16 }}>🏠</span></div>
           <div className="hide-mobile">
             <div style={{ fontFamily: T.pixel, fontSize: 7, color: T.accent, letterSpacing: 2 }}>HOUSEHOLD</div>
             <div style={{ fontFamily: T.pixel, fontSize: 7, color: T.mutedBright, letterSpacing: 1 }}>HUB</div>
           </div>
         </div>
-        {/* Nav */}
         <nav style={{ display: "flex", gap: 1, flex: 1, overflowX: "auto", scrollbarWidth: "none" }}>
           {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, border: "none",
-              background: activeTab === tab.id ? `${T.accent}20` : "transparent",
-              color: activeTab === tab.id ? T.accent : T.muted,
-              fontFamily: T.pixel, fontSize: 6, letterSpacing: 1, whiteSpace: "nowrap",
-              borderBottom: activeTab === tab.id ? `2px solid ${T.accent}` : "2px solid transparent",
-              flexShrink: 0,
-            }}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, border: "none", background: activeTab === tab.id ? `${T.accent}20` : "transparent", color: activeTab === tab.id ? T.accent : T.muted, fontFamily: T.pixel, fontSize: 6, letterSpacing: 1, whiteSpace: "nowrap", borderBottom: activeTab === tab.id ? `2px solid ${T.accent}` : "2px solid transparent", flexShrink: 0 }}>
               <span style={{ fontSize: 12 }}>{tab.icon}</span>
               <span className="hide-mobile">{tab.label}</span>
             </button>
           ))}
         </nav>
-        {/* Right */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {/* Sync dot */}
           <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 999, background: `${syncStatus === "saved" ? T.green : syncStatus === "saving" ? T.yellow : T.red}15`, border: `1px solid ${syncStatus === "saved" ? T.green : syncStatus === "saving" ? T.yellow : T.red}44` }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: syncStatus === "saved" ? T.green : syncStatus === "saving" ? T.yellow : T.red, animation: syncStatus === "saving" ? "pulse 1s infinite" : "none" }} />
-            <span style={{ fontFamily: T.mono, fontSize: 9, color: syncStatus === "saved" ? T.green : syncStatus === "saving" ? T.yellow : T.red }} className="hide-mobile">
-              {syncStatus === "saved" ? "SYNCED" : syncStatus === "saving" ? "SAVING" : "OFFLINE"}
-            </span>
+            <span style={{ fontFamily: T.mono, fontSize: 9, color: syncStatus === "saved" ? T.green : syncStatus === "saving" ? T.yellow : T.red }} className="hide-mobile">{syncStatus === "saved" ? "SYNCED" : syncStatus === "saving" ? "SAVING" : "OFFLINE"}</span>
           </div>
           <div style={{ fontFamily: T.mono, fontSize: 12, color: T.mutedBright }}>{time.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}</div>
         </div>
@@ -273,10 +222,8 @@ function Dashboard({ data, setActiveTab }) {
   const todayEvents = data.events.filter(e => e.date === todayStr);
   const upcoming = [...data.events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
   const duties = data.duties.map(d => ({ ...d, assignee: data.members.find(m => m.id === d.weeklyRotation?.[week]) }));
-
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 16px" }}>
-      {/* Hero */}
       <div style={{ background: `linear-gradient(135deg, ${T.accentDim}30, ${T.purple}18)`, border: `1px solid ${T.borderBright}`, borderRadius: 16, padding: "18px 24px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 2, marginBottom: 6 }}>WEEK {week.split("-W")[1]} · {getWeekLabel()}</div>
@@ -284,8 +231,6 @@ function Dashboard({ data, setActiveTab }) {
         </div>
         <span style={{ fontSize: 40 }}>🏠</span>
       </div>
-
-      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
           { label: "Tasks Pending", value: pending, color: T.orange, icon: "✓", tab: "tasks" },
@@ -300,10 +245,7 @@ function Dashboard({ data, setActiveTab }) {
           </Card>
         ))}
       </div>
-
-      {/* 2-col grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
-        {/* Duties */}
         <Card>
           <SectionTitle sub={getWeekLabel()} action={<Btn size="sm" variant="ghost" onClick={() => setActiveTab("duties")}>View →</Btn>}>THIS WEEK</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -318,8 +260,6 @@ function Dashboard({ data, setActiveTab }) {
             ))}
           </div>
         </Card>
-
-        {/* Events */}
         <Card>
           <SectionTitle action={<Btn size="sm" variant="ghost" onClick={() => setActiveTab("events")}>View →</Btn>}>UPCOMING</SectionTitle>
           {upcoming.length === 0 ? <EmptyState icon="📅" text="No upcoming events" /> :
@@ -343,8 +283,6 @@ function Dashboard({ data, setActiveTab }) {
             </div>
           }
         </Card>
-
-        {/* Tasks */}
         <Card>
           <SectionTitle action={<Btn size="sm" variant="ghost" onClick={() => setActiveTab("tasks")}>View →</Btn>}>RECENT TASKS</SectionTitle>
           {data.tasks.length === 0 ? <EmptyState icon="✓" text="No tasks yet" /> :
@@ -362,8 +300,6 @@ function Dashboard({ data, setActiveTab }) {
             </div>
           }
         </Card>
-
-        {/* Grocery */}
         <Card>
           <SectionTitle action={<Btn size="sm" variant="ghost" onClick={() => setActiveTab("grocery")}>View →</Btn>}>GROCERY</SectionTitle>
           {data.grocery.filter(g => !g.checked).length === 0 ? <EmptyState icon="🛒" text="All stocked up!" /> :
@@ -389,28 +325,22 @@ function Duties({ data, save }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newDuty, setNewDuty] = useState({ name: "", emoji: "🧹" });
   const isCurrent = viewWeek === getWeekKey();
-
   const assign = (dutyId, memberId) => save({ ...data, duties: data.duties.map(d => d.id === dutyId ? { ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: memberId || null } } : d) });
-
   const autoRotate = () => {
     const prev = shiftWeek(viewWeek, -1);
     save({ ...data, duties: data.duties.map(d => { const pi = data.members.findIndex(m => m.id === d.weeklyRotation?.[prev]); return { ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: data.members[(pi + 1) % data.members.length]?.id } }; }) });
   };
-
   const copyPrev = () => {
     const prev = shiftWeek(viewWeek, -1);
     save({ ...data, duties: data.duties.map(d => ({ ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: d.weeklyRotation?.[prev] || null } })) });
   };
-
   const addDuty = () => {
     if (!newDuty.name.trim()) return;
     save({ ...data, duties: [...data.duties, { id: uid(), ...newDuty, weeklyRotation: {} }] });
     setNewDuty({ name: "", emoji: "🧹" }); setShowAdd(false);
   };
-
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 16px" }}>
-      {/* Week nav */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 18px", marginBottom: 20 }}>
         <Btn size="sm" variant="ghost" onClick={() => setViewWeek(shiftWeek(viewWeek, -1))}>← Prev</Btn>
         <div style={{ textAlign: "center" }}>
@@ -419,13 +349,11 @@ function Duties({ data, save }) {
         </div>
         <Btn size="sm" variant="ghost" onClick={() => setViewWeek(shiftWeek(viewWeek, 1))}>Next →</Btn>
       </div>
-
       <SectionTitle sub="Assign household duties to members each week" action={<>
         <Btn size="sm" variant="ghost" onClick={copyPrev}>📋 Copy Last Week</Btn>
         <Btn size="sm" variant="ghost" onClick={autoRotate}>🔄 Auto-Rotate</Btn>
         <Btn size="sm" onClick={() => setShowAdd(true)}>+ Add</Btn>
       </>}>WEEKLY DUTIES</SectionTitle>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
         {data.duties.map(duty => {
           const assignedId = duty.weeklyRotation?.[viewWeek];
@@ -454,7 +382,6 @@ function Duties({ data, save }) {
           <span style={{ fontSize: 22 }}>+</span> Add Duty
         </div>
       </div>
-
       {showAdd && (
         <Modal title="Add New Duty" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addDuty}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -472,20 +399,16 @@ function Tasks({ data, save }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState("all");
   const [newTask, setNewTask] = useState({ title: "", assignee: "", list: "General", dueDate: "" });
-
   const addTask = () => {
     if (!newTask.title.trim()) return;
     save({ ...data, tasks: [...data.tasks, { id: uid(), ...newTask, completed: false, createdAt: new Date().toISOString() }] });
     setNewTask({ title: "", assignee: "", list: "General", dueDate: "" }); setShowAdd(false);
   };
-
   const toggle = id => save({ ...data, tasks: data.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t) });
   const del = id => save({ ...data, tasks: data.tasks.filter(t => t.id !== id) });
-
   const filtered = filter === "pending" ? data.tasks.filter(t => !t.completed) : filter === "done" ? data.tasks.filter(t => t.completed) : data.tasks;
   const lists = [...new Set(["General", ...data.tasks.map(t => t.list || "General")])];
   const byList = lists.reduce((acc, l) => { const items = filtered.filter(t => (t.list || "General") === l); if (items.length) acc[l] = items; return acc; }, {});
-
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 16px" }}>
       <SectionTitle sub="Shared household task lists" action={<>
@@ -494,7 +417,6 @@ function Tasks({ data, save }) {
         </div>
         <Btn onClick={() => setShowAdd(true)}>+ Add</Btn>
       </>}>TASKS</SectionTitle>
-
       {data.tasks.length === 0 ? <EmptyState icon="✓" text="No tasks yet" action={<Btn onClick={() => setShowAdd(true)}>Add your first task</Btn>} /> :
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
           {Object.entries(byList).map(([list, tasks]) => (
@@ -523,7 +445,6 @@ function Tasks({ data, save }) {
           ))}
         </div>
       }
-
       {showAdd && (
         <Modal title="Add Task" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addTask} disabled={!newTask.title.trim()}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -554,13 +475,11 @@ function Events({ data, save }) {
   const sorted = [...data.events].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sorted.filter(e => e.date >= todayStr);
   const past = sorted.filter(e => e.date < todayStr).reverse().slice(0, 5);
-
   const addEvent = () => {
     if (!newEv.title.trim() || !newEv.date) return;
     save({ ...data, events: [...data.events, { id: uid(), ...newEv }] });
     setNewEv({ title: "", date: "", time: "", description: "", members: [] }); setShowAdd(false);
   };
-
   const EvCard = ({ ev }) => {
     const isToday = ev.date === todayStr;
     const d = new Date(ev.date + "T00:00:00");
@@ -581,7 +500,6 @@ function Events({ data, save }) {
       </div>
     );
   };
-
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
       <SectionTitle sub="Events and appointments" action={<Btn onClick={() => setShowAdd(true)}>+ Add Event</Btn>}>EVENTS</SectionTitle>
@@ -589,7 +507,6 @@ function Events({ data, save }) {
         {upcoming.length > 0 && <><div style={{ fontFamily: T.pixel, fontSize: 8, color: T.green, letterSpacing: 1, marginBottom: 12 }}>UPCOMING</div><div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>{upcoming.map(ev => <EvCard key={ev.id} ev={ev} />)}</div></>}
         {past.length > 0 && <><div style={{ fontFamily: T.pixel, fontSize: 8, color: T.muted, letterSpacing: 1, marginBottom: 12 }}>RECENT PAST</div><div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{past.map(ev => <EvCard key={ev.id} ev={ev} />)}</div></>}
       </>}
-
       {showAdd && (
         <Modal title="Add Event" onClose={() => setShowAdd(false)} footer={<><Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn><Btn onClick={addEvent} disabled={!newEv.title || !newEv.date}>Add</Btn></>}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -614,31 +531,23 @@ function Events({ data, save }) {
 
 // ─── GROCERY ──────────────────────────────────────────────────────────────────
 const CATS = ["🥩 Meat & Fish", "🥬 Produce", "🧀 Dairy", "🥐 Bakery", "🧃 Beverages", "🧹 Cleaning", "🛁 Personal Care", "🥫 Pantry", "🧊 Frozen", "🛍 Other"];
-
 function Grocery({ data, save }) {
   const [form, setForm] = useState({ name: "", quantity: "", category: "🛍 Other" });
   const [showChecked, setShowChecked] = useState(false);
   const inputRef = useRef();
-
   const add = () => {
     if (!form.name.trim()) return;
     save({ ...data, grocery: [...data.grocery, { id: uid(), ...form, checked: false }] });
-    setForm(p => ({ ...p, name: "", quantity: "" }));
-    inputRef.current?.focus();
+    setForm(p => ({ ...p, name: "", quantity: "" })); inputRef.current?.focus();
   };
-
   const toggle = id => save({ ...data, grocery: data.grocery.map(g => g.id === id ? { ...g, checked: !g.checked } : g) });
   const remove = id => save({ ...data, grocery: data.grocery.filter(g => g.id !== id) });
-  const clearChecked = () => save({ ...data, grocery: data.grocery.filter(g => !g.checked) });
-
   const unchecked = data.grocery.filter(g => !g.checked);
   const checked = data.grocery.filter(g => g.checked);
   const byCategory = CATS.reduce((acc, c) => { const items = unchecked.filter(g => (g.category || "🛍 Other") === c); if (items.length) acc[c] = items; return acc; }, {});
-
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
       <SectionTitle sub={`${unchecked.length} items needed · ${checked.length} checked off`}>GROCERY LIST</SectionTitle>
-
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input ref={inputRef} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Add item..." style={{ flex: 1, minWidth: 140 }} onKeyDown={e => e.key === "Enter" && add()} />
@@ -647,7 +556,6 @@ function Grocery({ data, save }) {
           <Btn onClick={add}>Add</Btn>
         </div>
       </Card>
-
       {unchecked.length === 0 && checked.length === 0 ? <EmptyState icon="🛒" text="Your list is empty!" /> :
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
           {Object.entries(byCategory).map(([cat, items]) => (
@@ -667,12 +575,11 @@ function Grocery({ data, save }) {
           ))}
         </div>
       }
-
       {checked.length > 0 && (
         <div style={{ marginTop: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
             <button onClick={() => setShowChecked(p => !p)} style={{ fontFamily: T.pixel, fontSize: 7, color: T.muted, background: "none", border: "none", letterSpacing: 1 }}>{showChecked ? "▼" : "▶"} CHECKED OFF ({checked.length})</button>
-            {showChecked && <Btn size="sm" variant="danger" onClick={clearChecked}>Clear all</Btn>}
+            {showChecked && <Btn size="sm" variant="danger" onClick={() => save({ ...data, grocery: data.grocery.filter(g => !g.checked) })}>Clear all</Btn>}
           </div>
           {showChecked && (
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -691,67 +598,342 @@ function Grocery({ data, save }) {
   );
 }
 
+// ─── PIXEL RENDERING ENGINE ───────────────────────────────────────────────────
+const PW = 64, PH = 64;
+
+// 5×7 pixel font — each char is 5 columns of 7-bit column masks (bottom = LSB)
+const FONT5X7 = {
+  " ": [0, 0, 0, 0, 0], "!": [0, 0, 95, 0, 0], '"': [7, 0, 7, 0, 0], "#": [20, 127, 20, 127, 20],
+  "$": [36, 42, 127, 42, 18], "%": [35, 19, 8, 100, 98], "&": [54, 73, 85, 34, 80], "'": [0, 5, 3, 0, 0],
+  "(": [0, 28, 34, 65, 0], ")": [0, 65, 34, 28, 0], "*": [20, 8, 62, 8, 20], "+": [8, 8, 62, 8, 8],
+  ",": [0, 80, 48, 0, 0], "-": [8, 8, 8, 8, 8], ".": [0, 96, 96, 0, 0], "/": [32, 16, 8, 4, 2],
+  "0": [62, 81, 73, 69, 62], "1": [0, 66, 127, 64, 0], "2": [66, 97, 81, 73, 70], "3": [33, 65, 69, 75, 49],
+  "4": [24, 20, 18, 127, 16], "5": [39, 69, 69, 69, 57], "6": [60, 74, 73, 73, 48], "7": [1, 113, 9, 5, 3],
+  "8": [54, 73, 73, 73, 54], "9": [6, 73, 73, 41, 30], ":": [0, 54, 54, 0, 0], ";": [0, 86, 54, 0, 0],
+  "<": [8, 20, 34, 65, 0], "=": [20, 20, 20, 20, 20], ">": [0, 65, 34, 20, 8], "?": [2, 1, 81, 9, 6],
+  "A": [126, 9, 9, 9, 126], "B": [127, 73, 73, 73, 54], "C": [62, 65, 65, 65, 34], "D": [127, 65, 65, 34, 28],
+  "E": [127, 73, 73, 73, 65], "F": [127, 9, 9, 9, 1], "G": [62, 65, 65, 81, 115], "H": [127, 8, 8, 8, 127],
+  "I": [0, 65, 127, 65, 0], "J": [32, 64, 65, 63, 1], "K": [127, 8, 20, 34, 65], "L": [127, 64, 64, 64, 64],
+  "M": [127, 2, 12, 2, 127], "N": [127, 4, 8, 16, 127], "O": [62, 65, 65, 65, 62], "P": [127, 9, 9, 9, 6],
+  "Q": [62, 65, 81, 33, 94], "R": [127, 9, 25, 41, 70], "S": [38, 73, 73, 73, 50], "T": [1, 1, 127, 1, 1],
+  "U": [63, 64, 64, 64, 63], "V": [31, 32, 64, 32, 31], "W": [127, 32, 24, 32, 127], "X": [99, 20, 8, 20, 99],
+  "Y": [3, 4, 120, 4, 3], "Z": [97, 81, 73, 69, 67],
+  "a": [32, 84, 84, 84, 120], "b": [127, 72, 72, 72, 48], "c": [56, 68, 68, 68, 32], "d": [48, 72, 72, 72, 127],
+  "e": [56, 84, 84, 84, 24], "f": [8, 126, 9, 1, 2], "g": [8, 84, 84, 84, 60], "h": [127, 8, 8, 8, 112],
+  "i": [0, 72, 122, 64, 0], "j": [32, 64, 72, 58, 0], "k": [127, 16, 40, 68, 0], "l": [0, 65, 127, 64, 0],
+  "m": [124, 4, 24, 4, 120], "n": [124, 8, 4, 4, 120], "o": [56, 68, 68, 68, 56], "p": [124, 20, 20, 20, 8],
+  "q": [8, 20, 20, 20, 124], "r": [124, 8, 4, 4, 8], "s": [72, 84, 84, 84, 36], "t": [4, 63, 68, 64, 32],
+  "u": [60, 64, 64, 32, 124], "v": [28, 32, 64, 32, 28], "w": [60, 64, 56, 64, 60], "x": [68, 40, 16, 40, 68],
+  "y": [12, 80, 80, 80, 60], "z": [68, 100, 84, 76, 68],
+};
+
+function charWidth(scale = 1) { return (5 + 1) * scale; }
+function textWidth(str, scale = 1) { return str.length * charWidth(scale); }
+
+function pxText(ctx, str, x, y, color, scale = 1, maxW = PW) {
+  ctx.fillStyle = color;
+  const s = String(str).toUpperCase();
+  let cx = x;
+  for (const ch of s) {
+    if (cx - x >= maxW) break;
+    const cols = FONT5X7[ch] || FONT5X7["?"] || [0, 0, 0, 0, 0];
+    for (let col = 0; col < 5; col++) {
+      const mask = cols[col];
+      for (let row = 0; row < 7; row++) {
+        if (mask & (1 << row)) {
+          ctx.fillRect(cx + col * scale, y + row * scale, scale, scale);
+        }
+      }
+    }
+    cx += charWidth(scale);
+  }
+}
+
+// 8×8 sprites — each entry is 8 bytes (one per row, MSB = leftmost pixel)
+const SPRITES = {
+  laundry: [0x3C, 0x42, 0x99, 0xA1, 0x99, 0x42, 0x3C, 0x00],
+  cleaning: [0x06, 0x0C, 0x18, 0x30, 0x7E, 0xFF, 0x7E, 0x00],
+  dishes: [0x00, 0xFF, 0xFF, 0x7E, 0x3C, 0xFF, 0x00, 0x00],
+  trash: [0xFF, 0x81, 0xBD, 0x81, 0x81, 0x81, 0xFF, 0x00],
+  bathroom: [0x08, 0x49, 0x08, 0x3E, 0x08, 0x08, 0x0C, 0x0C],
+  calendar: [0xFE, 0x82, 0xBA, 0x82, 0xBA, 0x82, 0xFE, 0x00],
+  cart: [0x00, 0x7E, 0x4A, 0x7E, 0x40, 0x00, 0x50, 0x00],
+  check: [0x01, 0x02, 0x84, 0x48, 0x30, 0x20, 0x00, 0x00],
+  clock: [0x3C, 0x42, 0x99, 0x89, 0x81, 0x42, 0x3C, 0x00],
+  house: [0x10, 0x38, 0x7C, 0xFE, 0x6C, 0x6C, 0x6C, 0x00],
+  default: [0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x00],
+};
+
+function getSpriteKey(name = "") {
+  const n = name.toLowerCase();
+  if (/laundry|wash/.test(n)) return "laundry";
+  if (/floor|clean|sweep|mop|vacuum|broom/.test(n)) return "cleaning";
+  if (/dish|plate|kitchen/.test(n)) return "dishes";
+  if (/trash|bin|garbage|rubbish/.test(n)) return "trash";
+  if (/bathroom|toilet|shower|bath/.test(n)) return "bathroom";
+  if (/event|calendar|schedul|appoint/.test(n)) return "calendar";
+  if (/grocery|shop|store|buy|cart/.test(n)) return "cart";
+  if (/task|todo|check|done/.test(n)) return "check";
+  if (/clock|time|alarm/.test(n)) return "clock";
+  if (/home|house/.test(n)) return "house";
+  return "default";
+}
+
+function drawSprite(ctx, key, x, y, color) {
+  const rows = SPRITES[key] || SPRITES.default;
+  ctx.fillStyle = color;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (rows[r] & (1 << (7 - c))) ctx.fillRect(x + c, y + r, 1, 1);
+    }
+  }
+}
+
+// ── Mode-specific renderers ───────────────────────────────────────────────────
+function renderDuties(ctx, duties, members, week) {
+  const COLORS = ["#22d3ee", "#f97316", "#facc15", "#22c55e"];
+  const rows = duties.slice(0, 4);
+  const rowH = Math.floor(PH / rows.length); // 16px per row
+  rows.forEach((duty, i) => {
+    const y = i * rowH;
+    const member = members.find(m => m.id === duty.weeklyRotation?.[week]);
+    const color = member?.color || COLORS[i % 4];
+    // Row separator
+    if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
+    // Sprite — 8×8, vertically centred in top half of row
+    drawSprite(ctx, getSpriteKey(duty.name), 0, y + 1, color);
+    // Duty name — scale 1 (5px tall), fits ~9 chars in 54px
+    const dutyLabel = duty.name.toUpperCase().slice(0, 9);
+    pxText(ctx, dutyLabel, 10, y + 1, color, 1, 54);
+    // Member name — dimmed, below duty name
+    const memberLabel = member ? member.name.toUpperCase().slice(0, 9) : "UNASSIGNED";
+    pxText(ctx, memberLabel, 10, y + 9, member ? "#6b8caa" : "#4a5568", 1, 54);
+  });
+}
+
+function renderEvents(ctx, events) {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const upcoming = [...events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  if (!upcoming.length) {
+    drawSprite(ctx, "calendar", 28, 22, "#4a5568");
+    const msg = "NO EVENTS";
+    pxText(ctx, msg, Math.floor((PW - textWidth(msg)) / 2), 44, "#4a5568");
+    return;
+  }
+  const rowH = Math.floor(PH / upcoming.length);
+  upcoming.forEach((ev, i) => {
+    const y = i * rowH;
+    const isToday = ev.date === todayStr;
+    const color = isToday ? "#a855f7" : "#22d3ee";
+    if (i > 0) { ctx.fillStyle = "#1a2535"; ctx.fillRect(0, y, PW, 1); }
+    drawSprite(ctx, "calendar", 0, y + (rowH > 14 ? 3 : 0), color);
+    const d = new Date(ev.date + "T00:00:00");
+    const dateStr = `${d.toLocaleDateString("en", { month: "short" }).toUpperCase()} ${d.getDate()}`;
+    pxText(ctx, dateStr, 10, y + 1, isToday ? "#a855f7" : "#64748b", 1, 54);
+    pxText(ctx, ev.title, 10, y + 9, color, 1, 54);
+  });
+}
+
+function renderGrocery(ctx, grocery) {
+  const items = grocery.filter(g => !g.checked);
+  drawSprite(ctx, "cart", 0, 0, "#facc15");
+  pxText(ctx, `${items.length} TO BUY`, 10, 1, "#facc15", 1, 54);
+  ctx.fillStyle = "#1a2535"; ctx.fillRect(0, 10, PW, 1);
+  if (items.length === 0) {
+    drawSprite(ctx, "check", 28, 22, "#22c55e");
+    pxText(ctx, "ALL DONE!", Math.floor((PW - textWidth("ALL DONE!")) / 2), 36, "#22c55e");
+    return;
+  }
+  const COLORS = ["#22d3ee", "#f97316", "#a855f7", "#22c55e"];
+  items.slice(0, 4).forEach((item, i) => {
+    const y = 13 + i * 13;
+    ctx.fillStyle = COLORS[i % 4]; ctx.fillRect(0, y + 3, 3, 3);
+    pxText(ctx, item.name, 5, y, "#e2e8f0", 1, 59);
+  });
+  if (items.length > 4) pxText(ctx, `+${items.length - 4} MORE`, 5, 13 + 4 * 13, "#4a5568", 1, 54);
+}
+
+function renderClock(ctx, time) {
+  const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  // Date line — scale 1, centred at top
+  const dateStr = `${DAYS[time.getDay()]} ${MONTHS[time.getMonth()]} ${time.getDate()}`;
+  pxText(ctx, dateStr, Math.floor((PW - textWidth(dateStr, 1)) / 2), 2, "#22d3ee", 1);
+  // Time — scale 2 (10px tall digits), centred
+  const h = String(time.getHours()).padStart(2, "0");
+  const m = String(time.getMinutes()).padStart(2, "0");
+  const timeStr = `${h}:${m}`;
+  const tw = textWidth(timeStr, 2);
+  pxText(ctx, timeStr, Math.floor((PW - tw) / 2), 12, "#ffffff", 2);
+  // Seconds bar
+  ctx.fillStyle = "#0e3a45"; ctx.fillRect(2, 38, 60, 3);
+  ctx.fillStyle = "#22d3ee"; ctx.fillRect(2, 38, Math.round(time.getSeconds() / 59 * 60), 3);
+  // Day-of-week dots
+  for (let d = 0; d < 7; d++) {
+    const x = 1 + d * 9;
+    const active = d === time.getDay();
+    ctx.fillStyle = active ? "#22d3ee" : "#1e2d42";
+    ctx.fillRect(x + 1, 44, 5, active ? 3 : 1);
+    pxText(ctx, "SMTWTFS"[d], x, 50, active ? "#22d3ee" : "#2a3f5f", 1);
+  }
+  // Seconds digits small at bottom right
+  const secStr = String(time.getSeconds()).padStart(2, "0");
+  pxText(ctx, secStr, PW - textWidth(secStr, 1) - 1, 57, "#2a3f5f", 1);
+}
+
+function renderCustom(ctx, text) {
+  const clean = String(text || "").toUpperCase().replace(/[^A-Z0-9 :\-./!?]/g, "");
+  const words = clean.split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + w).length > 10) { if (cur) lines.push(cur.trim()); cur = w + " "; }
+    else cur += w + " ";
+  }
+  if (cur.trim()) lines.push(cur.trim());
+  const COLORS = ["#22d3ee", "#f97316", "#facc15", "#22c55e"];
+  const totalH = lines.length * 9;
+  const startY = Math.max(0, Math.floor((PH - totalH) / 2));
+  lines.forEach((line, i) => {
+    pxText(ctx, line, Math.floor((PW - textWidth(line)) / 2), startY + i * 9, COLORS[i % 4]);
+  });
+}
+
+function renderToCanvas(data, mode, customText, time) {
+  const canvas = document.createElement("canvas");
+  canvas.width = PW; canvas.height = PH;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, PW, PH);
+  const week = getWeekKey();
+  if (mode === "duties") renderDuties(ctx, data.duties, data.members, week);
+  if (mode === "events") renderEvents(ctx, data.events);
+  if (mode === "grocery") renderGrocery(ctx, data.grocery);
+  if (mode === "clock") renderClock(ctx, time);
+  if (mode === "custom") renderCustom(ctx, customText);
+  return canvas;
+}
+
+// Pure manual base64 — no btoa/String.fromCharCode, no browser quirks
+const B64CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function canvasToPixooBase64(canvas) {
+  const pixels = canvas.getContext("2d").getImageData(0, 0, PW, PH).data;
+  // Extract RGB bytes (drop alpha)
+  const rgb = new Uint8Array(PW * PH * 3);
+  for (let i = 0; i < PW * PH; i++) {
+    rgb[i * 3] = pixels[i * 4];
+    rgb[i * 3 + 1] = pixels[i * 4 + 1];
+    rgb[i * 3 + 2] = pixels[i * 4 + 2];
+  }
+  // Encode 3 bytes → 4 base64 chars, no padding needed (12288 is divisible by 3)
+  let out = "";
+  for (let i = 0; i < rgb.length; i += 3) {
+    const a = rgb[i], b = rgb[i + 1], c = rgb[i + 2];
+    out += B64CHARS[a >> 2]
+      + B64CHARS[((a & 3) << 4) | (b >> 4)]
+      + B64CHARS[((b & 15) << 2) | (c >> 6)]
+      + B64CHARS[c & 63];
+  }
+  return out;
+}
+
 // ─── PIXOO ────────────────────────────────────────────────────────────────────
 function Pixoo({ data, save }) {
   const [ip, setIp] = useState(data.pixoo?.ip || "");
   const [brightness, setBrightness] = useState(data.pixoo?.brightness ?? 70);
   const [mode, setMode] = useState(data.pixoo?.displayMode || "duties");
   const [customText, setCustomText] = useState("");
-  const [status, setStatus] = useState(null); // null | "ok" | "err"
+  const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
+  const [sendLog, setSendLog] = useState([]);
   const [time, setTime] = useState(new Date());
+  const previewRef = useRef();
+
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { drawPreview(); }, [mode, data, time, customText]);
+
+  const drawPreview = () => {
+    const canvas = previewRef.current;
+    if (!canvas) return;
+    const src = renderToCanvas(data, mode, customText, time);
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    // Scale up 4× inside the canvas itself so text is readable in the UI
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(src, 0, 0, PW, PH, 0, 0, canvas.width, canvas.height);
+  };
 
   const cmd = async (payload) => {
-    if (!ip) return false;
+    if (!ip) return { ok: false, error: "No proxy URL set" };
     try {
-      // ip is now a full https:// URL from the Cloudflare tunnel
       const url = ip.startsWith("http") ? `${ip.replace(/\/$/, "")}/post` : `http://${ip}/post`;
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(6000),
-      });
-      return r.ok;
-    } catch { return false; }
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
+      const rawText = await r.text();
+      let body = {};
+      try { body = JSON.parse(rawText); } catch { }
+      const ok = r.ok && (body.error_code === 0 || body.error_code === undefined);
+      return { ok, status: r.status, body, rawText };
+    } catch (e) { return { ok: false, error: e.message }; }
   };
 
   const test = async () => {
-    const ok = await cmd({ Command: "Channel/GetIndex" });
-    setStatus(ok ? "ok" : "err");
-    if (ok) save({ ...data, pixoo: { ...data.pixoo, ip } });
-  };
-
-  const week = getWeekKey();
-  const todayStr = new Date().toISOString().split("T")[0];
-
-  const previewLines = () => {
-    if (mode === "duties") return data.duties.slice(0, 4).map(d => { const m = data.members.find(x => x.id === d.weeklyRotation?.[week]); return `${d.emoji} ${d.name}: ${m?.name || "---"}`; });
-    if (mode === "events") { const ev = data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date))[0]; return ev ? [`📅 ${ev.title}`, `   ${ev.date}${ev.time ? " " + ev.time : ""}`] : ["No upcoming events"]; }
-    if (mode === "grocery") { const items = data.grocery.filter(g => !g.checked); return items.length ? [`🛒 ${items.length} items`, ...items.slice(0, 2).map(i => `  • ${i.name}`)] : ["🛒 All bought!"]; }
-    if (mode === "clock") return [time.toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" }), time.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })];
-    if (mode === "custom") return [customText || "(empty)"];
-    return [];
+    const res = await cmd({ Command: "Channel/GetIndex" });
+    setStatus(res.ok ? "ok" : "err");
+    if (res.ok) save({ ...data, pixoo: { ...data.pixoo, ip } });
   };
 
   const sendToPixoo = async () => {
     setSending(true);
-    await cmd({ Command: "Draw/ClearHttpText" });
-    const colors = ["#22d3ee", "#f97316", "#facc15", "#22c55e"];
-    const lines = previewLines();
-    for (let i = 0; i < lines.length; i++) {
-      await cmd({ Command: "Draw/SendHttpText", TextId: i + 1, x: 0, y: i * 16, dir: 0, font: 2, TextWidth: 64, Textheight: 16, speed: 80, color: colors[i % 4], align: 1, TextString: lines[i] });
+    setSendLog([]);
+    const log = [];
+    const step = async (label, payload) => {
+      const res = await cmd(payload);
+      const detail = res.error
+        ? res.error
+        : `error_code=${res.body?.error_code ?? "?"} · ${res.rawText?.slice(0, 100)}`;
+      log.push({ label, ok: res.ok, detail });
+      setSendLog([...log]);
+      return res.ok;
+    };
+
+    // Step 1: send the pixel frame
+    const canvas = renderToCanvas(data, mode, customText, time);
+    const base64rgb = canvasToPixooBase64(canvas);
+    const picId = Date.now() % 100000;
+
+    // Verify payload: 64×64×3 = 12288 bytes → 16384 base64 chars
+    const expectedLen = PW * PH * 3 * 4 / 3; // = 16384
+    if (base64rgb.length !== expectedLen) {
+      log.push({ label: `Payload size error: got ${base64rgb.length} chars, expected ${expectedLen}`, ok: false, detail: "Canvas encoding failed" });
+      setSendLog([...log]); setSending(false); return;
     }
+    log.push({ label: `Payload verified: ${base64rgb.length} chars (${PW}×${PH}×3 RGB bytes)`, ok: true, detail: "" });
+    setSendLog([...log]);
+
+    await step("Switch to Custom channel (SelectIndex: 3)", {
+      Command: "Channel/SetIndex",
+      SelectIndex: 3,
+    });
+
+    await step("Send pixel frame (Draw/SendHttpGif)", {
+      Command: "Draw/SendHttpGif",
+      PicNum: 1,
+      PicWidth: 64,
+      PicOffset: 0,
+      PicID: picId,
+      PicSpeed: 1000,
+      PicData: base64rgb,
+    });
+
     setSending(false);
   };
 
   const MODES = [
-    { id: "duties", label: "Weekly Duties", icon: "🔄" },
-    { id: "events", label: "Next Event", icon: "📅" },
-    { id: "grocery", label: "Grocery Count", icon: "🛒" },
-    { id: "clock", label: "Date & Clock", icon: "🕐" },
-    { id: "custom", label: "Custom Text", icon: "✏️" },
+    { id: "duties", label: "Weekly Duties", icon: "household" },
+    { id: "events", label: "Next Events", icon: "calendar" },
+    { id: "grocery", label: "Grocery List", icon: "cart" },
+    { id: "clock", label: "Clock", icon: "clock" },
+    { id: "custom", label: "Custom Text", icon: "default" },
   ];
 
   return (
@@ -759,16 +941,16 @@ function Pixoo({ data, save }) {
       <SectionTitle sub="Control your Divoom Pixoo64 LED display">PIXOO64</SectionTitle>
 
       <div style={{ background: `${T.accent}08`, border: `1px solid ${T.accentDim}44`, borderRadius: 12, padding: "16px 18px", marginBottom: 20, lineHeight: 1.7 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>📡 How to connect</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>How to connect</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[
-            { n: "1", text: "Install cloudflared on your home computer", sub: "Mac: brew install cloudflared · Windows: winget install --id Cloudflare.cloudflared" },
-            { n: "2", text: "Run the proxy script from the project folder", sub: null },
+            { n: "1", text: "Install cloudflared on your home computer", sub: "Mac: brew install cloudflared  ·  Windows: winget install --id Cloudflare.cloudflared" },
+            { n: "2", text: "Run the proxy from the project folder", sub: null },
             { n: "3", text: "Copy the https://….trycloudflare.com URL it prints", sub: null },
-            { n: "4", text: "Paste it as the Proxy URL below and click Test", sub: null },
+            { n: "4", text: "Paste it below as the Proxy URL and click Test", sub: null },
           ].map(s => (
-            <div key={s.n} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${T.accent}22`, border: `1px solid ${T.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.mono, fontSize: 10, color: T.accent, flexShrink: 0, marginTop: 1 }}>{s.n}</div>
+            <div key={s.n} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: `${T.accent}22`, border: `1px solid ${T.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.mono, fontSize: 10, color: T.accent, flexShrink: 0, marginTop: 1 }}>{s.n}</div>
               <div>
                 <div style={{ fontSize: 13, color: T.text }}>{s.text}</div>
                 {s.sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{s.sub}</div>}
@@ -776,26 +958,25 @@ function Pixoo({ data, save }) {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 12, padding: "10px 14px", background: T.surface, borderRadius: 8, fontFamily: T.mono, fontSize: 12, color: T.green }}>
+        <div style={{ marginTop: 12, padding: "8px 14px", background: T.surface, borderRadius: 8, fontFamily: T.mono, fontSize: 12, color: T.green }}>
           $ node pixoo-proxy.js 192.168.1.42
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 20 }}>
         <Card>
           <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 16 }}>CONNECTION</div>
-          <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>PROXY URL (from cloudflared)</label>
+          <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>PROXY URL</label>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <input value={ip} onChange={e => setIp(e.target.value)} placeholder="https://xxxx.trycloudflare.com" style={{ flex: 1 }} />
             <Btn onClick={test} disabled={!ip}>Test</Btn>
           </div>
-          <p style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>Paste the URL printed by <code style={{ fontFamily: T.mono }}>pixoo-proxy.js</code></p>
-          {status && <div style={{ padding: "8px 12px", borderRadius: 8, marginBottom: 16, background: status === "ok" ? `${T.green}15` : `${T.red}15`, border: `1px solid ${status === "ok" ? T.green : T.red}44`, fontSize: 13, color: status === "ok" ? T.green : T.red }}>{status === "ok" ? "✓ Connected!" : "✗ Failed — check IP & WiFi"}</div>}
+          {status && <div style={{ padding: "8px 12px", borderRadius: 8, marginBottom: 14, background: status === "ok" ? `${T.green}15` : `${T.red}15`, border: `1px solid ${status === "ok" ? T.green : T.red}44`, fontSize: 13, color: status === "ok" ? T.green : T.red }}>{status === "ok" ? "✓ Connected!" : "✗ Failed — is the proxy running?"}</div>}
           <label style={{ fontSize: 12, color: T.muted, display: "block", marginBottom: 6 }}>BRIGHTNESS <span style={{ color: T.accent }}>{brightness}%</span></label>
           <input type="range" min="0" max="100" value={brightness} onChange={e => setBrightness(+e.target.value)} onMouseUp={e => { cmd({ Command: "Channel/SetBrightness", Brightness: +e.target.value }); save({ ...data, pixoo: { ...data.pixoo, brightness: +e.target.value } }); }} style={{ width: "100%", accentColor: T.accent, marginBottom: 14 }} />
           <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="secondary" onClick={() => cmd({ Command: "Channel/OnOffScreen", OnOff: 1 })} style={{ flex: 1 }}>☀️ On</Btn>
-            <Btn variant="secondary" onClick={() => cmd({ Command: "Channel/OnOffScreen", OnOff: 0 })} style={{ flex: 1 }}>🌙 Off</Btn>
+            <Btn variant="secondary" onClick={() => cmd({ Command: "Channel/OnOffScreen", OnOff: 1 })} style={{ flex: 1 }}>Screen On</Btn>
+            <Btn variant="secondary" onClick={() => cmd({ Command: "Channel/OnOffScreen", OnOff: 0 })} style={{ flex: 1 }}>Screen Off</Btn>
           </div>
         </Card>
 
@@ -803,31 +984,39 @@ function Pixoo({ data, save }) {
           <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 14 }}>DISPLAY MODE</div>
           {MODES.map(m => (
             <button key={m.id} onClick={() => { setMode(m.id); save({ ...data, pixoo: { ...data.pixoo, displayMode: m.id } }); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 12px", borderRadius: 9, border: `2px solid ${mode === m.id ? T.accent : T.border}`, background: mode === m.id ? `${T.accent}12` : T.surface, marginBottom: 7, cursor: "pointer" }}>
-              <span style={{ fontSize: 18 }}>{m.icon}</span>
+              <SpriteIcon spriteKey={m.icon} color={mode === m.id ? T.accent : T.muted} />
               <span style={{ fontSize: 13, fontWeight: 600, color: mode === m.id ? T.accent : T.text }}>{m.label}</span>
-              {mode === m.id && <span style={{ marginLeft: "auto", color: T.accent }}>✓</span>}
+              {mode === m.id && <span style={{ marginLeft: "auto", color: T.accent, fontSize: 16 }}>✓</span>}
             </button>
           ))}
-          {mode === "custom" && <input value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Your message…" style={{ width: "100%", marginBottom: 10 }} maxLength={64} />}
-          <Btn onClick={sendToPixoo} disabled={sending || !ip} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>{sending ? "📡 Sending…" : "📺 Send to Pixoo64"}</Btn>
+          {mode === "custom" && <input value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Your message..." style={{ width: "100%", marginBottom: 10 }} maxLength={60} />}
+          <Btn onClick={sendToPixoo} disabled={sending || !ip} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
+            {sending ? "Sending..." : "Send to Pixoo64"}
+          </Btn>
+          {sendLog.length > 0 && (
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+              {sendLog.map((entry, i) => (
+                <div key={i} style={{ fontSize: 11, fontFamily: T.mono, padding: "5px 8px", borderRadius: 6, background: entry.ok ? `${T.green}10` : `${T.red}10`, border: `1px solid ${entry.ok ? T.green : T.red}30` }}>
+                  <div style={{ color: entry.ok ? T.green : T.red }}>{entry.ok ? "✓" : "✗"} {entry.label}</div>
+                  {entry.detail && <div style={{ color: T.muted, marginTop: 2, wordBreak: "break-all" }}>{entry.detail}</div>}
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
-      {/* Preview */}
-      <Card style={{ marginTop: 20 }}>
-        <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 14 }}>PREVIEW</div>
+      <Card>
+        <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 14 }}>LIVE PREVIEW</div>
         <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ width: 192, height: 192, background: "#000", border: "4px solid #1a1a2e", borderRadius: 8, overflow: "hidden", position: "relative", flexShrink: 0, boxShadow: `0 0 24px ${T.accent}33` }}>
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: 10, gap: 6 }}>
-              {previewLines().map((line, i) => (
-                <div key={i} style={{ fontFamily: T.mono, fontSize: mode === "clock" && i === 1 ? 18 : 9, color: ["#22d3ee", "#f97316", "#facc15", "#22c55e"][i % 4], overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", textAlign: mode === "clock" ? "center" : "left" }}>{line}</div>
-              ))}
-            </div>
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)" }} />
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <canvas ref={previewRef} width={256} height={256}
+              style={{ width: 192, height: 192, imageRendering: "pixelated", border: "4px solid #1a1a2e", borderRadius: 8, background: "#000", boxShadow: `0 0 24px ${T.accent}33`, display: "block" }} />
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", borderRadius: 6, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)" }} />
           </div>
-          <div>
-            <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.muted, letterSpacing: 1, marginBottom: 10 }}>CONTENT</div>
-            {previewLines().map((line, i) => <div key={i} style={{ fontFamily: T.mono, fontSize: 12, color: ["#22d3ee", "#f97316", "#facc15", "#22c55e"][i % 4], marginBottom: 4 }}>{line}</div>)}
+          <div style={{ fontSize: 12, color: T.muted, maxWidth: 280, lineHeight: 1.7, marginTop: 8 }}>
+            <p>This is a pixel-accurate preview rendered with the same engine as the Pixoo64.</p>
+            <p style={{ marginTop: 8 }}>The display is 64×64 pixels. Text uses a built-in 5×7 pixel font. Sprites are 8×8 bitmaps matched from duty/item names.</p>
           </div>
         </div>
       </Card>
@@ -835,21 +1024,29 @@ function Pixoo({ data, save }) {
   );
 }
 
+// Small canvas rendering a single sprite for inline use
+function SpriteIcon({ spriteKey, color }) {
+  const ref = useRef();
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 8, 8);
+    drawSprite(ctx, spriteKey, 0, 0, color || T.accent);
+  }, [spriteKey, color]);
+  return <canvas ref={ref} width={8} height={8} style={{ width: 16, height: 16, imageRendering: "pixelated", flexShrink: 0 }} />;
+}
+
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function Settings({ data, save }) {
   const [newM, setNewM] = useState({ name: "", emoji: "🧑", color: "#22d3ee" });
   const COLORS = ["#22d3ee", "#f97316", "#22c55e", "#a855f7", "#facc15", "#ef4444", "#ec4899", "#3b82f6"];
-
   const addMember = () => { if (!newM.name.trim()) return; save({ ...data, members: [...data.members, { id: uid(), ...newM }] }); setNewM({ name: "", emoji: "🧑", color: "#22d3ee" }); };
   const updateMember = (id, updates) => save({ ...data, members: data.members.map(m => m.id === id ? { ...m, ...updates } : m) });
-
   const exportData = () => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "household-hub-backup.json"; a.click(); };
   const importData = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { try { save(JSON.parse(ev.target.result)); } catch { alert("Invalid file"); } }; r.readAsText(f); };
-
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
       <SectionTitle sub="Manage household members and preferences">SETTINGS</SectionTitle>
-
       <Card style={{ marginBottom: 20 }}>
         <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 18 }}>HOUSEHOLD MEMBERS</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
@@ -870,21 +1067,20 @@ function Settings({ data, save }) {
           <Btn onClick={addMember} disabled={!newM.name.trim()}>+ Add Member</Btn>
         </div>
       </Card>
-
       <Card>
         <div style={{ fontFamily: T.pixel, fontSize: 8, color: T.accent, letterSpacing: 1, marginBottom: 18 }}>DATA</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 12, marginBottom: 20 }}>
           {[["Members", data.members.length], ["Duties", data.duties.length], ["Tasks", data.tasks.length], ["Events", data.events.length], ["Grocery", data.grocery.length]].map(([k, v]) => (
-            <div key={k} style={{ textAlign: "center", padding: "10px", background: T.surface, borderRadius: 8, border: `1px solid ${T.border}` }}>
+            <div key={k} style={{ textAlign: "center", padding: 10, background: T.surface, borderRadius: 8, border: `1px solid ${T.border}` }}>
               <div style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 700, color: T.accent }}>{v}</div>
               <div style={{ fontSize: 11, color: T.muted }}>{k}</div>
             </div>
           ))}
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Btn variant="secondary" onClick={exportData}>⬇ Export</Btn>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>⬆ Import<input type="file" accept=".json" onChange={importData} style={{ display: "none" }} /></label>
-          <Btn variant="danger" onClick={() => { if (window.confirm("Reset ALL data?")) save(DEFAULT_DATA()); }}>🗑 Reset</Btn>
+          <Btn variant="secondary" onClick={exportData}>Export Backup</Btn>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Import Backup<input type="file" accept=".json" onChange={importData} style={{ display: "none" }} /></label>
+          <Btn variant="danger" onClick={() => { if (window.confirm("Reset ALL data?")) save(DEFAULT_DATA()); }}>Reset All</Btn>
         </div>
       </Card>
     </div>
@@ -899,20 +1095,13 @@ export default function App() {
 
   useEffect(() => {
     injectGlobals();
-    (async () => {
-      const loaded = await dbLoad();
-      setData(loaded || DEFAULT_DATA());
-    })();
+    (async () => { setData(await dbLoad() || DEFAULT_DATA()); })();
   }, []);
 
-  // Realtime subscription
   useEffect(() => {
     if (!supabase) return;
-    const ch = supabase
-      .channel("household_data_changes")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "household_data", filter: `id=eq.${DB_KEY}` }, payload => {
-        setData(payload.new.data);
-      })
+    const ch = supabase.channel("hh_data")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "household_data", filter: `id=eq.${DB_KEY}` }, p => setData(p.new.data))
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, []);
