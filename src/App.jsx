@@ -851,17 +851,17 @@ function pxMiniText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
 
 // 8×8 sprites — each entry is 8 bytes (one per row, MSB = leftmost pixel)
 const SPRITES = {
-  laundry: [0x1C, 0x22, 0x5D, 0x41, 0x5D, 0x22, 0x1C, 0x08],
-  cleaning: [0x08, 0x1C, 0x08, 0x08, 0x1C, 0x3E, 0x7F, 0x36],
-  dishes: [0x1C, 0x22, 0x41, 0x5D, 0x41, 0x22, 0x1C, 0x08],
-  trash: [0x08, 0x3E, 0x2A, 0x7F, 0x7F, 0x7F, 0x3E, 0x00],
-  bathroom: [0x0C, 0x12, 0x21, 0x41, 0x49, 0x22, 0x14, 0x08],
-  calendar: [0xFE, 0x82, 0xBA, 0x82, 0xBA, 0x82, 0xFE, 0x00],
-  cart: [0x18, 0x3C, 0x24, 0x7E, 0xDB, 0x7E, 0x24, 0x18],
-  check: [0x01, 0x02, 0x84, 0x48, 0x30, 0x20, 0x00, 0x00],
-  clock: [0x3C, 0x42, 0x99, 0x89, 0x81, 0x42, 0x3C, 0x00],
-  house: [0x10, 0x38, 0x7C, 0xFE, 0x6C, 0x6C, 0x6C, 0x00],
-  default: [0x18, 0x24, 0x5A, 0x7E, 0x7E, 0x5A, 0x24, 0x18],
+  laundry: [0x00, 0x24, 0x7E, 0x42, 0x5A, 0x5A, 0x7E, 0x3C],
+  cleaning: [0x0C, 0x12, 0x12, 0x0C, 0x08, 0x3E, 0x7F, 0x36],
+  dishes: [0x00, 0x1C, 0x22, 0x49, 0x41, 0x22, 0x1C, 0x08],
+  trash: [0x08, 0x1C, 0x3E, 0x2A, 0x2A, 0x3E, 0x3E, 0x00],
+  bathroom: [0x00, 0x00, 0x7E, 0x42, 0x7E, 0x0C, 0x12, 0x0C],
+  calendar: [0x24, 0x7E, 0x42, 0x7E, 0x42, 0x5A, 0x7E, 0x00],
+  cart: [0x08, 0x1C, 0x14, 0x3E, 0x7F, 0x3E, 0x14, 0x00],
+  check: [0x00, 0x01, 0x02, 0x24, 0x58, 0x30, 0x20, 0x00],
+  clock: [0x00, 0x3C, 0x42, 0x99, 0x85, 0x42, 0x3C, 0x00],
+  house: [0x08, 0x1C, 0x3E, 0x7F, 0x49, 0x49, 0x7F, 0x00],
+  default: [0x00, 0x18, 0x3C, 0x66, 0x42, 0x66, 0x3C, 0x18],
 };
 
 function getSpriteKey(name = "") {
@@ -949,17 +949,21 @@ function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
   drawSoftCard(ctx, 0, 0, PW, 11, "#141a30", "#26304a");
   ctx.fillStyle = color;
   ctx.fillRect(0, 10, PW, 1);
-  drawSprite(ctx, iconKey, 2, 1, color);
-  pxTightText(ctx, label, 12, 2, color, 38, 0);
+  const hasIcon = Boolean(iconKey);
+  if (hasIcon) drawSprite(ctx, iconKey, 2, 1, color);
+  pxMiniText(ctx, label, hasIcon ? 12 : 4, 3, color, hasIcon ? 42 : 50);
   drawMiniHeart(ctx, 52, 2, accent);
   drawMiniHeart(ctx, 58, 2, "#ffffff");
 }
 
 function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#171d32", border = "#2d3756") {
   drawSoftCard(ctx, x, y, w, h, fill, border);
-  drawSpriteRows(ctx, iconRows, x + 3, y + 3, accent);
-  pxMiniText(ctx, String(title).toUpperCase(), x + 14, y + 2, accent, w - 22);
-  if (detail) pxMiniText(ctx, String(detail).toUpperCase(), x + 14, y + 7, "#dce6f7", w - 22);
+  const hasIcon = Boolean(iconRows);
+  if (hasIcon) drawSpriteRows(ctx, iconRows, x + 3, y + 3, accent);
+  const textX = hasIcon ? x + 14 : x + 4;
+  const textW = hasIcon ? w - 22 : w - 8;
+  pxMiniText(ctx, String(title).toUpperCase(), textX, y + 2, accent, textW);
+  if (detail) pxMiniText(ctx, String(detail).toUpperCase(), textX, y + 7, "#dce6f7", textW);
 }
 
 // ── Mode-specific renderers ───────────────────────────────────────────────────
@@ -975,10 +979,10 @@ function renderDuties(ctx, duties, members, week) {
     const color = member?.color || COLORS[i % 4];
     drawSoftCard(ctx, 1, y, 62, 11, fills[i % fills.length], "#2c3553");
     drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
-    const dutyLabel = fitMiniText(duty.name, 40).toUpperCase();
-    pxMiniText(ctx, dutyLabel, 14, y + 2, color, 40);
-    const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 28).toUpperCase();
-    pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 28);
+    const dutyLabel = fitMiniText(duty.name, 44).toUpperCase();
+    pxMiniText(ctx, dutyLabel, 14, y + 2, color, 44);
+    const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 32).toUpperCase();
+    pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 32);
     drawMiniSakura(ctx, 56, y + 3, member ? "#ffd1eb" : "#556079", member ? "#fff8fc" : "#7d88a7");
   });
 }
@@ -986,7 +990,7 @@ function renderDuties(ctx, duties, members, week) {
 function renderEvents(ctx, events) {
   const todayStr = new Date().toISOString().split("T")[0];
   const upcoming = [...events].filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
-  drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", "calendar", "#ffd4ef");
+  drawKawaiiHeader(ctx, "EVENTS", "#9cb5ff", null, "#ffd4ef");
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
@@ -1002,18 +1006,17 @@ function renderEvents(ctx, events) {
     const isToday = ev.date === todayStr;
     const color = isToday ? "#ff8bc7" : ["#9cb5ff", "#ffd56f", "#7be4d3"][i % 3];
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
-    drawSprite(ctx, "calendar", 4, y + 3, color);
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${d.toLocaleDateString("en", { month: "short" }).toUpperCase()} ${d.getDate()}`;
-    pxMiniText(ctx, dateStr, 14, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 14);
-    pxMiniText(ctx, fitMiniText(ev.title, 34), 14, y + 7, color, 34);
+    pxMiniText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 18);
+    pxMiniText(ctx, fitMiniText(ev.title, 48), 5, y + 7, color, 48);
     if (isToday) drawMiniHeart(ctx, 54, y + 4, "#ffd1eb");
   });
 }
 
 function renderGrocery(ctx, grocery) {
   const items = grocery.filter(g => !g.checked);
-  drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", "cart", "#ffd7ec");
+  drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", null, "#ffd7ec");
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
@@ -1025,14 +1028,14 @@ function renderGrocery(ctx, grocery) {
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
   items.slice(0, 3).forEach((item, i) => {
     const y = 14 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(item.name, 32), item.quantity ? fitMiniText(String(item.quantity), 12) : "", COLORS[i % COLORS.length], SPRITES.cart, "#151b2b", "#2d3756");
+    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(item.name, 48), item.quantity ? fitMiniText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
   });
   if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 58, "#7f8baa", 20);
 }
 
 function renderTasks(ctx, tasks, members) {
   const pending = tasks.filter(t => !t.completed);
-  drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", "check", "#d6ffe3");
+  drawKawaiiHeader(ctx, "TO-DO", "#8af0a8", null, "#d6ffe3");
   if (pending.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
@@ -1045,7 +1048,7 @@ function renderTasks(ctx, tasks, members) {
     const y = 14 + i * 15;
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(task.title, 32), assignee ? fitMiniText(assignee.name, 12) : "", color, SPRITES.check, "#15252a", "#2c4a50");
+    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(task.title, 48), assignee ? fitMiniText(assignee.name, 16) : "", color, null, "#15252a", "#2c4a50");
   });
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
