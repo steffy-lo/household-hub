@@ -721,7 +721,7 @@ function getMiniGlyphPattern(ch) {
   return MINI_FONT[ch] || MINI_FONT["?"];
 }
 function miniTextWidth(str, spacing = 1) {
-  const s = String(str).toUpperCase();
+  const s = String(str);
   let width = 0;
   for (let i = 0; i < s.length; i++) {
     width += getMiniGlyphPattern(s[i])[0].length;
@@ -730,7 +730,7 @@ function miniTextWidth(str, spacing = 1) {
   return width;
 }
 function fitMiniText(str, maxW, spacing = 1) {
-  const s = String(str).toUpperCase();
+  const s = String(str);
   if (miniTextWidth(s, spacing) <= maxW) return s;
   let out = "";
   for (const ch of s) {
@@ -746,6 +746,120 @@ function pxMiniText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
   let cx = x;
   for (let i = 0; i < s.length; i++) {
     const pattern = getMiniGlyphPattern(s[i]);
+    for (let row = 0; row < pattern.length; row++) {
+      for (let col = 0; col < pattern[row].length; col++) {
+        if (pattern[row][col] === "1") ctx.fillRect(cx + col, y + row, 1, 1);
+      }
+    }
+    cx += pattern[0].length;
+    if (i < s.length - 1) cx += spacing;
+    if (cx - x >= maxW) break;
+  }
+}
+
+const DETAIL_FONT = {
+  "A": ["010", "101", "111", "101", "101"],
+  "B": ["110", "101", "110", "101", "110"],
+  "C": ["011", "100", "100", "100", "011"],
+  "D": ["110", "101", "101", "101", "110"],
+  "E": ["111", "100", "110", "100", "111"],
+  "F": ["111", "100", "110", "100", "100"],
+  "G": ["011", "100", "101", "101", "011"],
+  "H": ["101", "101", "111", "101", "101"],
+  "I": ["111", "010", "010", "010", "111"],
+  "J": ["001", "001", "001", "101", "010"],
+  "K": ["101", "101", "110", "101", "101"],
+  "L": ["100", "100", "100", "100", "111"],
+  "M": ["10001", "11011", "10101", "10001", "10001"],
+  "N": ["1001", "1101", "1011", "1001", "1001"],
+  "O": ["010", "101", "101", "101", "010"],
+  "P": ["110", "101", "110", "100", "100"],
+  "Q": ["010", "101", "101", "111", "011"],
+  "R": ["110", "101", "110", "101", "101"],
+  "S": ["011", "100", "010", "001", "110"],
+  "T": ["111", "010", "010", "010", "010"],
+  "U": ["101", "101", "101", "101", "111"],
+  "V": ["101", "101", "101", "101", "010"],
+  "W": ["10001", "10001", "10101", "11011", "10001"],
+  "X": ["101", "101", "010", "101", "101"],
+  "Y": ["101", "101", "010", "010", "010"],
+  "Z": ["111", "001", "010", "100", "111"],
+  "a": ["000", "011", "001", "011", "011"],
+  "b": ["100", "100", "110", "101", "110"],
+  "c": ["000", "011", "100", "100", "011"],
+  "d": ["001", "001", "011", "101", "011"],
+  "e": ["000", "010", "111", "100", "011"],
+  "f": ["001", "010", "111", "010", "010"],
+  "g": ["000", "011", "101", "011", "001"],
+  "h": ["100", "100", "110", "101", "101"],
+  "i": ["010", "000", "010", "010", "010"],
+  "j": ["001", "000", "001", "001", "010"],
+  "k": ["100", "101", "110", "101", "101"],
+  "l": ["010", "010", "010", "010", "001"],
+  "m": ["00000", "11010", "10101", "10101", "10101"],
+  "n": ["000", "110", "101", "101", "101"],
+  "o": ["000", "010", "101", "101", "010"],
+  "p": ["000", "110", "101", "110", "100"],
+  "q": ["000", "011", "101", "011", "001"],
+  "r": ["000", "101", "110", "100", "100"],
+  "s": ["000", "011", "110", "001", "110"],
+  "t": ["010", "111", "010", "010", "001"],
+  "u": ["000", "101", "101", "101", "011"],
+  "v": ["000", "101", "101", "101", "010"],
+  "w": ["00000", "10001", "10101", "10101", "01010"],
+  "x": ["000", "101", "010", "010", "101"],
+  "y": ["000", "101", "111", "001", "110"],
+  "z": ["000", "111", "001", "010", "111"],
+  "0": ["111", "101", "101", "101", "111"],
+  "1": ["010", "110", "010", "010", "111"],
+  "2": ["110", "001", "010", "100", "111"],
+  "3": ["110", "001", "010", "001", "110"],
+  "4": ["101", "101", "111", "001", "001"],
+  "5": ["111", "100", "110", "001", "110"],
+  "6": ["011", "100", "110", "101", "010"],
+  "7": ["111", "001", "010", "010", "010"],
+  "8": ["010", "101", "010", "101", "010"],
+  "9": ["010", "101", "011", "001", "110"],
+  " ": ["00", "00", "00", "00", "00"],
+  "-": ["000", "000", "111", "000", "000"],
+  "/": ["001", "001", "010", "100", "100"],
+  ".": ["0", "0", "0", "0", "1"],
+  ",": ["0", "0", "0", "1", "1"],
+  ":": ["0", "1", "0", "1", "0"],
+  "+": ["000", "010", "111", "010", "000"],
+  "!": ["1", "1", "1", "0", "1"],
+  "?": ["110", "001", "010", "000", "010"],
+};
+
+function getDetailGlyphPattern(ch) {
+  return DETAIL_FONT[ch] || DETAIL_FONT["?"];
+}
+function detailTextWidth(str, spacing = 1) {
+  const s = String(str);
+  let width = 0;
+  for (let i = 0; i < s.length; i++) {
+    width += getDetailGlyphPattern(s[i])[0].length;
+    if (i < s.length - 1) width += spacing;
+  }
+  return width;
+}
+function fitDetailText(str, maxW, spacing = 1) {
+  const s = String(str);
+  if (detailTextWidth(s, spacing) <= maxW) return s;
+  let out = "";
+  for (const ch of s) {
+    const next = out + ch;
+    if (detailTextWidth(next, spacing) > maxW) break;
+    out = next;
+  }
+  return out;
+}
+function pxDetailText(ctx, str, x, y, color, maxW = PW, spacing = 1) {
+  ctx.fillStyle = color;
+  const s = fitDetailText(str, maxW, spacing);
+  let cx = x;
+  for (let i = 0; i < s.length; i++) {
+    const pattern = getDetailGlyphPattern(s[i]);
     for (let row = 0; row < pattern.length; row++) {
       for (let col = 0; col < pattern[row].length; col++) {
         if (pattern[row][col] === "1") ctx.fillRect(cx + col, y + row, 1, 1);
@@ -822,23 +936,6 @@ function drawSpriteRows(ctx, rows, x, y, color) {
   }
 }
 
-function drawPixelPattern(ctx, pattern, x, y, color) {
-  ctx.fillStyle = color;
-  for (let r = 0; r < pattern.length; r++) {
-    for (let c = 0; c < pattern[r].length; c++) {
-      if (pattern[r][c] === "1") ctx.fillRect(x + c, y + r, 1, 1);
-    }
-  }
-}
-
-function drawMiniSparkle(ctx, x, y, color) {
-  drawPixelPattern(ctx, ["010", "111", "010"], x, y, color);
-}
-
-function drawMiniBlock(ctx, x, y, color) {
-  drawPixelPattern(ctx, ["11", "11"], x, y, color);
-}
-
 function drawSoftCard(ctx, x, y, w, h, fill, border = "#2b3551") {
   ctx.fillStyle = fill;
   ctx.fillRect(x, y, w, h);
@@ -855,9 +952,7 @@ function drawKawaiiHeader(ctx, label, color, iconKey, accent = "#ffd7ec") {
   ctx.fillRect(0, 10, PW, 1);
   const hasIcon = Boolean(iconKey);
   if (hasIcon) drawSprite(ctx, iconKey, 2, 1, color);
-  pxMiniText(ctx, label, hasIcon ? 12 : 4, 3, color, hasIcon ? 42 : 50);
-  drawMiniSparkle(ctx, 53, 4, accent);
-  drawMiniBlock(ctx, 59, 4, "#ffffff");
+  pxMiniText(ctx, String(label).toUpperCase(), hasIcon ? 12 : 4, 3, color, hasIcon ? 42 : 50);
 }
 
 function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#171d32", border = "#2d3756") {
@@ -866,8 +961,15 @@ function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#
   if (hasIcon) drawSpriteRows(ctx, iconRows, x + 3, y + 3, accent);
   const textX = hasIcon ? x + 14 : x + 4;
   const textW = hasIcon ? w - 22 : w - 8;
-  pxMiniText(ctx, String(title).toUpperCase(), textX, y + 2, accent, textW);
-  if (detail) pxMiniText(ctx, String(detail).toUpperCase(), textX, y + 7, "#dce6f7", textW);
+  pxDetailText(ctx, String(title), textX, y + 2, accent, textW);
+  if (detail) pxDetailText(ctx, String(detail), textX, y + 7, "#dce6f7", textW);
+}
+
+function formatCompactDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 // ── Mode-specific renderers ───────────────────────────────────────────────────
@@ -882,10 +984,10 @@ function renderDuties(ctx, duties, members, week) {
     const color = member?.color || COLORS[i % 4];
     drawSoftCard(ctx, 1, y, 62, 11, "#171d32", "#2d3756");
     drawSpriteRows(ctx, getDutySpriteRows(duty), 3, y + 2, color);
-    const dutyLabel = fitMiniText(duty.name, 44).toUpperCase();
-    pxMiniText(ctx, dutyLabel, 14, y + 2, color, 44);
-    const memberLabel = fitMiniText(member ? member.name : "UNASSIGNED", 32).toUpperCase();
-    pxMiniText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 32);
+    const dutyLabel = fitDetailText(duty.name, 44);
+    pxDetailText(ctx, dutyLabel, 14, y + 2, color, 44);
+    const memberLabel = fitDetailText(member ? member.name : "Unassigned", 40);
+    pxDetailText(ctx, memberLabel, 14, y + 7, member ? "#d6ebff" : "#8891aa", 40);
   });
 }
 
@@ -896,8 +998,6 @@ function renderEvents(ctx, events) {
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
-    drawMiniSparkle(ctx, 18, 24, "#ff8cc2");
-    drawMiniBlock(ctx, 43, 30, "#ffd56f");
     pxMiniText(ctx, "NO PLANS", 18, 39, "#d8def0", 24);
     pxMiniText(ctx, "ALL CLEAR", 14, 47, "#7382a8", 32);
     return;
@@ -910,9 +1010,8 @@ function renderEvents(ctx, events) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-    pxMiniText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 32);
-    pxMiniText(ctx, fitMiniText(ev.title, 52), 5, y + 7, color, 52);
-    if (isToday) drawMiniSparkle(ctx, 55, y + 5, "#ffd1eb");
+    pxDetailText(ctx, fitDetailText(ev.title, 52), 5, y + 7, color, 60);
+    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 60);
   });
 }
 
@@ -922,17 +1021,15 @@ function renderGrocery(ctx, grocery) {
   if (items.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#182331", "#2c3551");
     drawSprite(ctx, "cart", 27, 21, "#ffd56f");
-    drawMiniSparkle(ctx, 17, 25, "#ff9dcc");
-    drawMiniBlock(ctx, 44, 29, "#7be4d3");
     pxMiniText(ctx, "ALL SET!", 19, 40, "#d9f7e7", 24);
     return;
   }
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
   items.slice(0, 3).forEach((item, i) => {
     const y = 14 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(item.name, 48), item.quantity ? fitMiniText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
+    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(item.name, 48), item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
   });
-  if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 58, "#7f8baa", 20);
+  if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 60, "#7f8baa", 20);
 }
 
 function renderTasks(ctx, tasks, members) {
@@ -941,8 +1038,6 @@ function renderTasks(ctx, tasks, members) {
   if (pending.length === 0) {
     drawSoftCard(ctx, 11, 18, 42, 26, "#15252a", "#2c4a50");
     drawSprite(ctx, "check", 28, 21, "#8af0a8");
-    drawMiniSparkle(ctx, 16, 26, "#ffd56f");
-    drawMiniBlock(ctx, 44, 28, "#ff9dcc");
     pxMiniText(ctx, "DONE!", 24, 40, "#d8ffe2", 16);
     return;
   }
@@ -950,7 +1045,8 @@ function renderTasks(ctx, tasks, members) {
     const y = 14 + i * 15;
     const assignee = members.find(m => m.id === task.assignee);
     const color = assignee?.color || ["#8af0a8", "#7be4d3", "#ffd56f"][i % 3];
-    drawInfoRow(ctx, 2, y, 60, 13, fitMiniText(task.title, 48), assignee ? fitMiniText(assignee.name, 16) : "", color, null, "#15252a", "#2c4a50");
+    const detail = task.dueDate ? formatCompactDate(task.dueDate) : assignee?.name || "";
+    drawInfoRow(ctx, 2, y, 60, 13, fitDetailText(task.title, 48), detail, color, null, "#15252a", "#2c4a50");
   });
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
