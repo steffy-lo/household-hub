@@ -9,7 +9,7 @@ A shared household planner with real-time sync across all family members' phones
 | Service | Purpose | Cost |
 |---------|---------|------|
 | **Supabase** | Database — syncs data across all phones in real time | Free |
-| **Vercel** | Hosts the web app at a public URL | Free |
+| **Netlify** | Hosts the web app at a public URL | Free |
 
 ---
 
@@ -49,7 +49,7 @@ alter publication supabase_realtime add table household_data;
 
 ## Step 2 — Upload code to GitHub
 
-> GitHub is where your code lives — Vercel reads from it to build your site automatically.
+> GitHub is where your code lives — Netlify reads from it to build your site automatically.
 
 1. Go to **https://github.com** → sign up or log in
 
@@ -80,28 +80,34 @@ git push -u origin main
 
 ---
 
-## Step 3 — Deploy to Vercel
+## Step 3 — Deploy to Netlify
 
-1. Go to **https://vercel.com** → sign up with GitHub (use the same account)
+1. Go to **https://netlify.com** → sign up with GitHub (use the same account)
 
-2. Click **Add New → Project** → select your `household-hub` repository → click **Import**
+2. Click **Add new site → Import an existing project** → choose **GitHub** → select your `household-hub` repository
 
-3. Before clicking Deploy, click **Environment Variables** and add:
+3. Netlify auto-detects Vite. Confirm these build settings (they should be pre-filled):
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist`
+
+4. Click **Add environment variables** and add:
 
    | Name | Value |
    |------|-------|
    | `VITE_SUPABASE_URL` | Your Supabase Project URL from Step 1 |
    | `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key from Step 1 |
 
-4. Click **Deploy** — wait about 1 minute
+5. Click **Deploy site** — wait about 1 minute
 
-5. Vercel gives you a URL like `household-hub-abc.vercel.app` 🎉
+6. Netlify gives you a URL like `household-hub-abc123.netlify.app` 🎉
+
+   > Optional: click **Domain settings → Options → Edit site name** to get a cleaner URL like `my-household-hub.netlify.app`
 
 ---
 
 ## Step 4 — Share with your household
 
-- **Bookmark the Vercel URL** on everyone's phone
+- **Bookmark the Netlify URL** on everyone's phone
 - **Add to home screen**: On iPhone tap Share → "Add to Home Screen". On Android tap the menu → "Add to Home Screen"
 - Everyone sees the **same live data** — changes sync instantly across all devices!
 
@@ -120,7 +126,7 @@ The Pixoo64 only works when your phone is on your **home WiFi network** (it's a 
 
 ## Updating the app later
 
-Any time you push new code to GitHub, Vercel automatically rebuilds and deploys. No manual steps needed.
+Any time you push new code to GitHub, Netlify automatically rebuilds and deploys. No manual steps needed.
 
 ---
 
@@ -128,7 +134,7 @@ Any time you push new code to GitHub, Vercel automatically rebuilds and deploys.
 
 **"Cannot find module" error** → Run `npm install` first
 
-**Supabase not syncing** → Check that you copied the correct URL and anon key into Vercel environment variables, then go to Vercel → your project → Redeploy
+**Supabase not syncing** → Check that you copied the correct URL and anon key into Netlify environment variables (Site settings → Environment variables), then go to Netlify → your site → Deploys → Trigger deploy
 
 **Pixoo64 not responding** → Make sure your phone is on home WiFi (same network as the Pixoo). The Pixoo IP may change — re-check in the Divoom app.
 
