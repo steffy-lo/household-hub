@@ -1,7 +1,84 @@
-<img width="1302" height="806" alt="Screenshot 2026-03-24 at 11 34 07 AM" src="https://github.com/user-attachments/assets/a6c5aa19-bbca-457c-8326-a09487c3a34f" />
+# Household Hub
 
-# Demo
+Household Hub is a shared household planning app for couples, families, roommates, and anyone managing home life together. It combines weekly chore assignments, shared tasks, events, grocery tracking, and a Divoom Pixoo64 display into one lightweight dashboard with real-time sync.
+
+<img width="1302" height="806" alt="Household Hub screenshot" src="https://github.com/user-attachments/assets/a6c5aa19-bbca-457c-8326-a09487c3a34f" />
+
+## Demo
+
 https://github.com/user-attachments/assets/995dca7a-9fed-431a-a1b8-00e1e85b6e34
+
+## What This Project Is
+
+Household Hub is designed to make shared home coordination feel simple and visible.
+
+Instead of splitting chores, errands, reminders, and grocery notes across different chat threads and apps, this project keeps them in one place:
+
+- weekly household duties with member rotation
+- shared to-do tasks
+- upcoming events and appointments
+- grocery items and check-off lists
+- Pixoo64 support for showing a live household summary on a physical display
+
+The app is intentionally simple and collaborative. Everyone looks at the same shared state, and changes sync in real time across devices.
+
+## Who It Is For
+
+This project is useful for:
+
+- couples sharing recurring home responsibilities
+- families coordinating chores and schedules
+- roommates who want a visible shared system instead of ad hoc messages
+- people who enjoy ambient home dashboards, especially with a Pixoo64
+
+If you want a household command center that works on phones and can also live on a desk or shelf as a pixel display, this is what the project is built for.
+
+## Core Features
+
+- Real-time sync with Supabase so all household members see the same data
+- Weekly duties view with assignment rotation
+- Shared task list with assignees and due dates
+- Events board with compact Pixoo-friendly date rendering
+- Grocery list with check-off flow
+- Settings screen for household members, colors, backups, and reset
+- Pixoo64 integration with a rotating four-frame display:
+  - chores
+  - to-do
+  - events
+  - grocery
+- Custom duty sprites so household categories like laundry or floor cleaning can have their own 8x8 icons
+
+## How The Pixoo64 Fits In
+
+The Pixoo64 integration is not a separate toy feature. It is a display layer for the same household data used in the main app.
+
+The Pixoo view renders the current shared data into a compact 64x64 pixel animation. It automatically rotates between:
+
+- `CHORES`
+- `TO-DO`
+- `EVENTS`
+- `GROCERY`
+
+Long item names scroll horizontally when needed, and the live preview in the app uses the same rendering logic as the display upload flow.
+
+## Tech Stack
+
+- React
+- Vite
+- Supabase
+- Browser canvas rendering for Pixoo64 frame generation
+- Optional local Pixoo proxy / sender scripts for device communication
+
+## Project Structure
+
+- [/Users/losteffy/Documents/GitHub/household-hub/src/App.jsx](/Users/losteffy/Documents/GitHub/household-hub/src/App.jsx)
+  Main application UI, data flows, Pixoo renderer, and Pixoo upload logic.
+- [/Users/losteffy/Documents/GitHub/household-hub/src/supabase.js](/Users/losteffy/Documents/GitHub/household-hub/src/supabase.js)
+  Supabase client setup.
+- [/Users/losteffy/Documents/GitHub/household-hub/pixoo-proxy.js](/Users/losteffy/Documents/GitHub/household-hub/pixoo-proxy.js)
+  Local HTTP bridge for browser-based Pixoo control.
+- [/Users/losteffy/Documents/GitHub/household-hub/scripts/send-pixoo.mjs](/Users/losteffy/Documents/GitHub/household-hub/scripts/send-pixoo.mjs)
+  Headless sender script for direct Pixoo uploads outside the UI.
 
 # 🏠 Household Hub — Deployment Guide
 
@@ -171,11 +248,15 @@ Replace `192.168.1.42` with your Pixoo's actual IP (find it in the Divoom app �
 > **Note:** The tunnel URL changes every time you restart the proxy. Just paste the new URL into the app and click Test again. The URL is only active while the script is running.
 ---
 
-## Updating the app later
+## Backups And Data Safety
 
-Any time you push new code to GitHub, Netlify automatically rebuilds and deploys. No manual steps needed.
+The Settings screen includes:
 
----
+- export backup
+- import backup
+- reset all data
+
+If you are using this with a real household, exporting a backup occasionally is a good idea.
 
 ## Troubleshooting
 
