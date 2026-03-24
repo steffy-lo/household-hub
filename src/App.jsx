@@ -1455,9 +1455,19 @@ function SpriteIcon({ spriteKey, color }) {
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function Settings({ data, save }) {
   const [newM, setNewM] = useState({ name: "", color: "#22d3ee" });
+  const [memberDrafts, setMemberDrafts] = useState({});
   const COLORS = ["#22d3ee", "#f97316", "#22c55e", "#a855f7", "#facc15", "#ef4444", "#ec4899", "#3b82f6"];
   const addMember = () => { if (!newM.name.trim()) return; save({ ...data, members: [...data.members, { id: uid(), ...newM }] }); setNewM({ name: "", color: "#22d3ee" }); };
   const updateMember = (id, updates) => save({ ...data, members: data.members.map(m => m.id === id ? { ...m, ...updates } : m) });
+  useEffect(() => {
+    setMemberDrafts(Object.fromEntries(data.members.map(m => [m.id, m.name])));
+  }, [data.members]);
+  const commitMemberName = (id) => {
+    const draft = memberDrafts[id];
+    const member = data.members.find(m => m.id === id);
+    if (!member || draft == null || draft === member.name) return;
+    updateMember(id, { name: draft });
+  };
   const exportData = () => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "household-hub-backup.json"; a.click(); };
   const importData = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { try { save(JSON.parse(ev.target.result)); } catch { alert("Invalid file"); } }; r.readAsText(f); };
   return (
@@ -1469,7 +1479,17 @@ function Settings({ data, save }) {
           {data.members.map(m => (
             <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, flexWrap: "wrap" }}>
               <div style={{ width: 14, height: 14, borderRadius: "50%", background: m.color, boxShadow: `0 0 0 3px ${m.color}22` }} />
-              <input value={m.name} onChange={e => updateMember(m.id, { name: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
+              <input
+                value={memberDrafts[m.id] ?? m.name}
+                onChange={e => setMemberDrafts(p => ({ ...p, [m.id]: e.target.value }))}
+                onBlur={() => commitMemberName(m.id)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                style={{ flex: 1, minWidth: 100 }}
+              />
               <div style={{ display: "flex", gap: 4 }}>{COLORS.map(c => <button key={c} onClick={() => updateMember(m.id, { color: c })} style={{ width: 18, height: 18, borderRadius: "50%", background: c, border: `2px solid ${m.color === c ? "#fff" : "transparent"}` }} />)}</div>
               <button onClick={() => { if (data.members.length > 1) save({ ...data, members: data.members.filter(x => x.id !== m.id) }); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 18 }} disabled={data.members.length <= 1}>×</button>
             </div>
