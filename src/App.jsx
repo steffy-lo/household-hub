@@ -332,9 +332,28 @@ function Duties({ data, save }) {
   const [spriteDraft, setSpriteDraft] = useState(() => spriteRowsToGrid(SPRITES.default));
   const isCurrent = viewWeek === getWeekKey();
   const assign = (dutyId, memberId) => save({ ...data, duties: data.duties.map(d => d.id === dutyId ? { ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: memberId || null } } : d) });
+  const findLatestAssignedMemberId = (duty, weekKey) => {
+    let cursor = shiftWeek(weekKey, -1);
+    for (let i = 0; i < 104; i++) {
+      const assignedId = duty.weeklyRotation?.[cursor];
+      if (assignedId) return assignedId;
+      cursor = shiftWeek(cursor, -1);
+    }
+    return null;
+  };
   const autoRotate = () => {
-    const prev = shiftWeek(viewWeek, -1);
-    save({ ...data, duties: data.duties.map(d => { const pi = data.members.findIndex(m => m.id === d.weeklyRotation?.[prev]); return { ...d, weeklyRotation: { ...d.weeklyRotation, [viewWeek]: data.members[(pi + 1) % data.members.length]?.id } }; }) });
+    save({
+      ...data,
+      duties: data.duties.map(duty => {
+        const previousAssignedId = findLatestAssignedMemberId(duty, viewWeek);
+        const previousIndex = data.members.findIndex(member => member.id === previousAssignedId);
+        const nextAssignedId = previousIndex >= 0 ? data.members[(previousIndex + 1) % data.members.length]?.id || null : null;
+        return {
+          ...duty,
+          weeklyRotation: { ...duty.weeklyRotation, [viewWeek]: nextAssignedId },
+        };
+      }),
+    });
   };
   const copyPrev = () => {
     const prev = shiftWeek(viewWeek, -1);
@@ -912,6 +931,22 @@ function pxDetailTextScrolled(ctx, str, x, y, color, maxW = PW, scrollPx = 0, sp
   ctx.restore();
 }
 
+function drawTinyStar(ctx, x, y, color) {
+  const STAR = [
+    "00100",
+    "11111",
+    "01110",
+    "11111",
+    "00100",
+  ];
+  ctx.fillStyle = color;
+  for (let row = 0; row < STAR.length; row++) {
+    for (let col = 0; col < STAR[row].length; col++) {
+      if (STAR[row][col] === "1") ctx.fillRect(x + col, y + row, 1, 1);
+    }
+  }
+}
+
 // 8×8 sprites — each entry is 8 bytes (one per row, MSB = leftmost pixel)
 const SPRITES = {
   laundry: [0x00, 0x24, 0x7E, 0x42, 0x5A, 0x5A, 0x7E, 0x3C],
@@ -1081,8 +1116,14 @@ function renderEvents(ctx, events, scrollStep = 0) {
     drawSoftCard(ctx, 2, y, 60, 13, "#171d32", "#2d3756");
     const d = new Date(ev.date + "T00:00:00");
     const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
+    const detailStr = isToday && ev.time ? String(ev.time).slice(0, 5) : dateStr;
     pxDetailTextScrolled(ctx, ev.title, 5, y + 7, color, 56, scrollStep);
-    pxDetailText(ctx, dateStr, 5, y + 2, isToday ? "#ffd1eb" : "#8f9ab6", 56);
+    if (isToday) {
+      drawTinyStar(ctx, 5, y + 2, "#ffd56f");
+      pxDetailText(ctx, detailStr, 12, y + 2, "#ffd1eb", 49);
+    } else {
+      pxDetailText(ctx, dateStr, 5, y + 2, "#8f9ab6", 56);
+    }
   });
 }
 
