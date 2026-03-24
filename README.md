@@ -1,3 +1,8 @@
+<img width="1302" height="806" alt="Screenshot 2026-03-24 at 11 34 07 AM" src="https://github.com/user-attachments/assets/a6c5aa19-bbca-457c-8326-a09487c3a34f" />
+
+# Demo
+https://github.com/user-attachments/assets/995dca7a-9fed-431a-a1b8-00e1e85b6e34
+
 # 🏠 Household Hub — Deployment Guide
 
 A shared household planner with real-time sync across all family members' phones, plus Pixoo64 LED display control.
