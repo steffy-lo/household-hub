@@ -1104,8 +1104,8 @@ function renderEvents(ctx, events, scrollStep = 0) {
   if (!upcoming.length) {
     drawSoftCard(ctx, 10, 17, 44, 28, "#171d32", "#2d3756");
     drawSprite(ctx, "calendar", 28, 21, "#9cb5ff");
-    pxMiniText(ctx, "NO PLANS", 18, 33, "#d8def0", 58);
-    pxMiniText(ctx, "ALL CLEAR", 14, 47, "#7382a8", 58);
+    pxMiniText(ctx, "NO PLANS", 14, 33, "#d8def0", 58);
+    pxMiniText(ctx, "ALL CLEAR", 11, 47, "#7382a8", 58);
     return;
   }
   const rowH = 15;
