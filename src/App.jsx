@@ -46,6 +46,13 @@ const PIXOO_STATIC_FRAME_COUNT = Math.ceil(3000 / PIXOO_FRAME_MS);
 const PIXOO_SCROLL_PX_PER_FRAME = 2;
 const PIXOO_SCROLL_RIGHT_BUFFER = 4;
 const PIXOO_SCROLL_TAIL_BUFFER = 2;
+const PIXOO_GROCERY_ROW_H = 15;
+const PIXOO_GROCERY_LIST_Y = 13;
+const PIXOO_GROCERY_LIST_H = 45;
+const PIXOO_GROCERY_QTY_MAX_W = 14;
+const PIXOO_GROCERY_QTY_GAP = 3;
+const PIXOO_GROCERY_VERTICAL_PX_PER_FRAME = 2;
+const PIXOO_GROCERY_PAGE_HOLD_FRAMES = 2;
 
 function DEFAULT_DATA() {
   const week = getWeekKey();
@@ -1041,6 +1048,33 @@ function drawInfoRow(ctx, x, y, w, h, title, detail, accent, iconRows, fill = "#
   if (detail) pxDetailText(ctx, String(detail), textX, y + 7, "#dce6f7", textW);
 }
 
+function drawGroceryRow(ctx, item, y, accent, scrollStep = 0) {
+  const x = 2;
+  const w = 60;
+  const qtyLabel = getGroceryQuantityLabel(item);
+  const fittedQty = qtyLabel ? fitDetailText(qtyLabel, PIXOO_GROCERY_QTY_MAX_W) : "";
+  const qtyWidth = fittedQty ? detailTextWidth(fittedQty) : 0;
+  const textX = x + 4;
+  const qtyX = qtyWidth ? x + w - 4 - qtyWidth : x + w - 4;
+  const textW = Math.max(0, qtyWidth ? qtyX - textX - PIXOO_GROCERY_QTY_GAP : w - 8);
+
+  drawSoftCard(ctx, x, y, w, 13, "#151b2b", "#2d3756");
+  if (qtyWidth) {
+    ctx.fillStyle = "#31415f";
+    ctx.fillRect(qtyX - 2, y + 3, 1, 7);
+  }
+
+  if (scrollStep > 0) {
+    pxDetailTextScrolled(ctx, item.name, textX, y + 4, accent, textW, scrollStep);
+  } else {
+    pxDetailText(ctx, item.name, textX, y + 4, accent, textW);
+  }
+
+  if (fittedQty) {
+    pxDetailText(ctx, fittedQty, qtyX, y + 4, "#dce6f7", PIXOO_GROCERY_QTY_MAX_W);
+  }
+}
+
 function formatCompactDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(`${dateStr}T00:00:00`);
@@ -1052,32 +1086,82 @@ function getScrollOverflow(text, maxW) {
   return Math.max(0, detailTextWidth(String(text || "")) - Math.max(0, maxW - PIXOO_SCROLL_RIGHT_BUFFER) + PIXOO_SCROLL_TAIL_BUFFER);
 }
 
-function getModeScrollOverflow(data, mode) {
+function buildHorizontalScrollFrames(overflow) {
+  if (overflow <= 0) return [];
+  const frames = [];
+  let scrollStep = 0;
+  while (scrollStep < overflow) {
+    scrollStep = Math.min(overflow, scrollStep + PIXOO_SCROLL_PX_PER_FRAME);
+    frames.push({ scrollStep });
+  }
+  return frames;
+}
+
+function getGroceryQuantityLabel(item) {
+  return item?.quantity ? String(item.quantity).toUpperCase() : "";
+}
+
+function getGroceryNameMaxWidth(item) {
+  const qty = getGroceryQuantityLabel(item);
+  const fittedQty = qty ? fitDetailText(qty, PIXOO_GROCERY_QTY_MAX_W) : "";
+  const qtyWidth = fittedQty ? detailTextWidth(fittedQty) : 0;
+  return Math.max(0, 60 - 8 - (qtyWidth ? qtyWidth + PIXOO_GROCERY_QTY_GAP : 0));
+}
+
+function buildModeExtraFrames(data, mode) {
   if (mode === "duties") {
-    return Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name, 46)));
+    const overflow = Math.max(0, ...data.duties.slice(0, 4).map(duty => getScrollOverflow(duty.name, 46)));
+    return buildHorizontalScrollFrames(overflow);
   }
   if (mode === "tasks") {
-    return Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title, 56)));
+    const overflow = Math.max(0, ...data.tasks.filter(t => !t.completed).slice(0, 3).map(task => getScrollOverflow(task.title, 56)));
+    return buildHorizontalScrollFrames(overflow);
   }
   if (mode === "events") {
     const todayStr = new Date().toISOString().split("T")[0];
-    return Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 56)));
+    const overflow = Math.max(0, ...data.events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => getScrollOverflow(ev.title, 56)));
+    return buildHorizontalScrollFrames(overflow);
   }
   if (mode === "grocery") {
-    return Math.max(0, ...data.grocery.filter(g => !g.checked).slice(0, 3).map(item => getScrollOverflow(item.name, 56)));
+    const items = data.grocery.filter(g => !g.checked);
+    if (items.length <= 3) {
+      const overflow = Math.max(0, ...items.map(item => getScrollOverflow(item.name, getGroceryNameMaxWidth(item))));
+      return buildHorizontalScrollFrames(overflow);
+    }
+    const frames = [];
+    for (let page = 1; page <= items.length - 3; page++) {
+      const targetOffset = page * PIXOO_GROCERY_ROW_H;
+      let currentOffset = (page - 1) * PIXOO_GROCERY_ROW_H;
+      while (currentOffset < targetOffset) {
+        currentOffset = Math.min(targetOffset, currentOffset + PIXOO_GROCERY_VERTICAL_PX_PER_FRAME);
+        frames.push({ groceryOffset: currentOffset });
+      }
+      for (let hold = 0; hold < PIXOO_GROCERY_PAGE_HOLD_FRAMES; hold++) {
+        frames.push({ groceryOffset: targetOffset });
+      }
+    }
+    return frames;
   }
-  return 0;
+  return [];
 }
 
 function buildPixooFramePlan(data) {
   return PIXOO_ROTATION_MODES.flatMap(mode => {
-    const overflow = getModeScrollOverflow(data, mode);
-    const scrollFrames = overflow > 0 ? Math.ceil(overflow / PIXOO_SCROLL_PX_PER_FRAME) + 1 : 0;
-    const frameCount = overflow > 0 ? PIXOO_STATIC_FRAME_COUNT + scrollFrames : PIXOO_STATIC_FRAME_COUNT;
-    return Array.from({ length: frameCount }, (_, index) => ({
+    const extraFrames = buildModeExtraFrames(data, mode);
+    const frames = Array.from({ length: PIXOO_STATIC_FRAME_COUNT }, () => ({
       mode,
-      scrollStep: overflow > 0 ? Math.max(0, index - (PIXOO_STATIC_FRAME_COUNT - 1)) * PIXOO_SCROLL_PX_PER_FRAME : 0,
+      scrollStep: 0,
+      groceryOffset: 0,
     }));
+    extraFrames.forEach(extraFrame => {
+      frames.push({
+        mode,
+        scrollStep: 0,
+        groceryOffset: 0,
+        ...extraFrame,
+      });
+    });
+    return frames;
   });
 }
 
@@ -1127,7 +1211,7 @@ function renderEvents(ctx, events, scrollStep = 0) {
   });
 }
 
-function renderGrocery(ctx, grocery, scrollStep = 0) {
+function renderGrocery(ctx, grocery, scrollStep = 0, groceryOffset = 0) {
   const items = grocery.filter(g => !g.checked);
   drawKawaiiHeader(ctx, "GROCERY", "#ffd56f", null);
   if (items.length === 0) {
@@ -1137,12 +1221,16 @@ function renderGrocery(ctx, grocery, scrollStep = 0) {
     return;
   }
   const COLORS = ["#7be4d3", "#ffd56f", "#ff9dcc"];
-  items.slice(0, 3).forEach((item, i) => {
-    const y = 13 + i * 15;
-    drawInfoRow(ctx, 2, y, 60, 13, "", item.quantity ? fitDetailText(String(item.quantity), 16) : "", COLORS[i % COLORS.length], null, "#151b2b", "#2d3756");
-    pxDetailTextScrolled(ctx, item.name, 6, y + 2, COLORS[i % COLORS.length], 56, scrollStep);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(2, PIXOO_GROCERY_LIST_Y, 60, PIXOO_GROCERY_LIST_H);
+  ctx.clip();
+  items.forEach((item, index) => {
+    const y = PIXOO_GROCERY_LIST_Y + index * PIXOO_GROCERY_ROW_H - groceryOffset;
+    if (y + 13 < PIXOO_GROCERY_LIST_Y || y > PIXOO_GROCERY_LIST_Y + PIXOO_GROCERY_LIST_H) return;
+    drawGroceryRow(ctx, item, y, COLORS[index % COLORS.length], items.length <= 3 ? scrollStep : 0);
   });
-  if (items.length > 3) pxMiniText(ctx, `+${items.length - 3} MORE`, 22, 60, "#7f8baa", 20);
+  ctx.restore();
 }
 
 function renderTasks(ctx, tasks, members, scrollStep = 0) {
@@ -1165,17 +1253,18 @@ function renderTasks(ctx, tasks, members, scrollStep = 0) {
   if (pending.length > 3) pxMiniText(ctx, `+${pending.length - 3} MORE`, 22, 58, "#7f9b89", 20);
 }
 
-function renderToCanvas(data, mode, scrollStep = 0) {
+function renderToCanvas(data, mode, animationState = {}) {
   const canvas = document.createElement("canvas");
   canvas.width = PW; canvas.height = PH;
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, PW, PH);
   const week = getWeekKey();
+  const { scrollStep = 0, groceryOffset = 0 } = animationState;
   if (mode === "duties") renderDuties(ctx, data.duties, data.members, week, scrollStep);
   if (mode === "tasks") renderTasks(ctx, data.tasks, data.members, scrollStep);
   if (mode === "events") renderEvents(ctx, data.events, scrollStep);
-  if (mode === "grocery") renderGrocery(ctx, data.grocery, scrollStep);
+  if (mode === "grocery") renderGrocery(ctx, data.grocery, scrollStep, groceryOffset);
   return canvas;
 }
 
@@ -1214,7 +1303,7 @@ function Pixoo({ data, save }) {
   const [previewFrameIndex, setPreviewFrameIndex] = useState(0);
   const previewRef = useRef();
   const previewPlan = buildPixooFramePlan(data);
-  const activePreviewFrame = previewPlan[previewFrameIndex % Math.max(previewPlan.length, 1)] || { mode: PIXOO_ROTATION_MODES[0], scrollStep: 0 };
+  const activePreviewFrame = previewPlan[previewFrameIndex % Math.max(previewPlan.length, 1)] || { mode: PIXOO_ROTATION_MODES[0], scrollStep: 0, groceryOffset: 0 };
 
   useEffect(() => {
     setPreviewFrameIndex(0);
@@ -1228,7 +1317,7 @@ function Pixoo({ data, save }) {
   const drawPreview = () => {
     const canvas = previewRef.current;
     if (!canvas) return;
-    const src = renderToCanvas(data, activePreviewFrame.mode, activePreviewFrame.scrollStep);
+    const src = renderToCanvas(data, activePreviewFrame.mode, activePreviewFrame);
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     // Scale up 4× inside the canvas itself so text is readable in the UI
@@ -1301,7 +1390,7 @@ function Pixoo({ data, save }) {
 
     // Step 1: build the rotating household animation
     const animationPlan = buildPixooFramePlan(data);
-    const frames = animationPlan.map(frame => renderToCanvas(data, frame.mode, frame.scrollStep));
+    const frames = animationPlan.map(frame => renderToCanvas(data, frame.mode, frame));
     const frameData = frames.map(canvasToPixooBase64);
     const picId = await getNextPicId(log);
     if (picId == null) {
